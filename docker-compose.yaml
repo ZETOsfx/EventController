@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  # DB Service
+  database:
+    image: postgres:14.9
+    container_name: db
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: "app-db"
+      POSTGRES_USER: "alex"
+      POSTGRES_PASSWORD: "pass"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # Server backend application
+  app:
+    build: .
+    container_name: app
+    restart: always
+    ports:
+      - "3000:3000"
+    links:
+      - database
+
+  # Nginx Service
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    restart: always
+    tty: true
+    environment:
+      - "APPLICATION_UPSTREAM=app:3000"
+    volumes:
+      - ./server/docker/nginx/conf.d/:/etc/nginx/conf.d/
+      - ./server/docker/nginx/templates/:/etc/nginx/templates/
+    ports:
+      - "80:80"
+      - "443:443"
+
+#Docker Volumes
+volumes:
+  pgdata:
+    driver: local

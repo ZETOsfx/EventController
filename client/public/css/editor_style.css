@@ -1,0 +1,86 @@
+
+
+p {
+    margin: 0 0 10px;
+}
+
+.tabs {
+    max-width: 1400px;
+    margin: 20px auto;
+}
+
+.tabs__nav {
+    display: flex;
+    margin: 4px auto;
+    border-radius: 4px;
+}
+
+.tabs__nav_in {
+    display: flex;
+    margin: 4px auto;
+    border-radius: 4px;
+}
+
+.tabs__nav-btn, .tabs__nav-btn_in {
+    margin-right: 4px;
+    padding: 15px 30px;
+    font-size: 20px;
+    background-color: #f5f5f5;
+    border: 10px;
+    border-right: 1px solid #ddd;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.tabs__nav-btn:hover {
+    background-color: #ddd;
+}
+
+    .tabs__nav-btn.active {
+        background-color: #0f868c;
+        border-right-color: #0f868c;
+        color: #fff;
+        border-radius: 4px;
+    }
+
+.tabs__nav-btn_in:last-child {
+    border-right: none;
+}
+
+.tabs__nav-btn_in:hover {
+    background-color: #ddd;
+}
+
+    .tabs__nav-btn_in.active {
+        background-color: #0f868c;
+        border-right-color: #0f868c;
+        color: #fff;
+        border-radius: 4px;
+    }
+
+    .tabs__nav-btn_in:last-child {
+    border-right: none;
+}
+
+.tabs__content {
+    padding: 30px;
+    background-color: var(--sidebar-color);
+    border-radius: 4px;
+}
+
+.tabs__item {
+    display: none;
+}
+
+.tabs__item.active {
+    display: block;
+}
+
+.event__block, input, label {
+    display: block;
+}
+
+.event__block__in {
+    display: inline-block;
+}
+
