@@ -1,9 +1,6 @@
 require('dotenv').config();
-const db    = require('../../config/dbConfig')['migrations'];       // Database connection
-const cache = require('../../config/redisConfig');    // Redis connection
-
-// -------------- LOGGING & PATH ----------------
-// const mainLogger = require('../../domain/Model/mainLogger');
+const db    = require('../../config/dbConfig');
+// const cache = require('../../config/redisConfig');
 
 const Lessons = [ 
     [30000, 31200, 'Перерыв'],  // Перерыв, с 8:20
@@ -26,8 +23,8 @@ function getState(curSec) {
     return 'Свободка'; // Играет шаблон "Обед"
 }
 
-function WhatTime() {               // Узнать время в секундах с начала дня
-    let today = new Date();         // Получить текущее время и вернуть значение в секнудах
+function WhatTime() {
+    let today = new Date();
     return  (today.getHours() * 60 + today.getMinutes()) * 60 + today.getSeconds();
 }
 

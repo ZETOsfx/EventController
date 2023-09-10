@@ -8,3 +8,16 @@ sql/*
 dump.rdb
 crontabfile
 entrypoint.bash
+
+# Editor directories and files
+.vscode
+.vscode/*
+.idea/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

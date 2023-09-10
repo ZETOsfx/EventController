@@ -14,8 +14,8 @@ router.patch('/register', authMw, userController.registerAsync);
 // ------------ LOGIN ------------------
 router.post('/authenticate', userController.signInAsync);   
 
-router.get('/all', authMw, userController.getAllUsers);     //  /account/all    outbase { none }
-router.patch('/upd', authMw, userController.updateUser);    //  /account/upd    inbase  { id, name, role, password }
-router.post('/rm', authMw, userController.deleteUser);      //  /account/rm     inbase  { id }
+router.get('/all', authMw, userController.getAllUsers);
+router.patch('/upd', authMw, userController.updateUser);
+router.post('/rm', authMw, userController.deleteUser);
 
 module.exports = router;

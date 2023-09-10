@@ -1,18 +1,17 @@
-const userRouter = require("./routes/AdminRoutes");
-const eventRouter = require("./routes/EditorRoutes");
-const moderRouter = require("./routes/ModeratorRoutes");
-const noteRouter = require("./routes/ManagerRoutes");
-const fileRouter = require("./routes/FileworkingRoutes");
+const authMiddleware = require('./middleware/authMiddleware');
 
 function getRoutes(app)
 {
-    app.use('/account', userRouter );
-    app.use('/event',   eventRouter);
-    app.use('/moder',   moderRouter);
-    app.use('/note',    noteRouter );
-    app.use('/upload',  fileRouter );
+    /** Работа с аккаунтами пользователей */
+    app.get('/accounts/list', require("./handlers/accounts/accountListHandler"));
+    app.post('/accounts/add', require("./handlers/accounts/addAccountHandler"));
+    app.post('/accounts/update', require("./handlers/accounts/updateAccountHandler"));
+    app.delete('/accounts/delete', require("./handlers/accounts/deleteAccountHandler"));
 
-    return;
+    /** Авторизация пользователей */
+    app.post('/auth', require("./handlers/auth/authHandler"));
+
+
 }
 
 module.exports = getRoutes;

@@ -1,6 +1,6 @@
 require('dotenv').config();
 
-const db = require('../../config/dbConfig')['migrations'];
+const db = require('../../config/dbConfig');
 const nodemailer = require('nodemailer');
 const Mailgen = require('mailgen');
 

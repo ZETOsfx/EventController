@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');              
 const exec = require('child_process').exec;
 
-const db = require('../../config/dbConfig')['migrations'];
+const db = require('../../config/dbConfig');
 
 class fileworkingService {
         // Get all data
