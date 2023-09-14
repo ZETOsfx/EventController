@@ -1,5 +1,3 @@
-require('dotenv').config();
-
 const argon2 = require("argon2");
 
 const { Op } = require("sequelize");
@@ -21,7 +19,7 @@ class UserService
      */
     async addOne(params)
     {
-        // this.accessCheck(params);
+        this.accessCheck(params);
 
         const { name, login, password, role } = params.body;
 
@@ -61,7 +59,7 @@ class UserService
      */
     async getAll(params)
     {
-        // this.accessCheck(params);
+        this.accessCheck(params);
 
         let response = [];
 
@@ -94,7 +92,7 @@ class UserService
      */
     async updateOne(params)
     {
-        // this.accessCheck(params);
+        this.accessCheck(params);
 
         const { id, name, login, role, password } = params.body;
 
@@ -149,7 +147,7 @@ class UserService
      */
     async deleteOne(params)
     {
-        // this.accessCheck(params);
+        this.accessCheck(params);
 
         const { id } = params.body;
 

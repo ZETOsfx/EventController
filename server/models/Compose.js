@@ -14,7 +14,6 @@ module.exports = (sequelize, DataTypes) => {
             Compose.hasMany(models.Program, {
                 sourceKey: 'id',
                 foreignKey: 'composeId',
-                as: 'programs',
             });
 
             Compose.hasOne(models.Request, {
@@ -37,12 +36,16 @@ module.exports = (sequelize, DataTypes) => {
             primaryKey: true,
             allowNull: false,
         },
-        name: DataTypes.STRING(30),
+        name: {
+            type: DataTypes.STRING(30),
+            allowNull: false,
+        },
         comment: DataTypes.TEXT,
         date: DataTypes.STRING(10),
         isSpecial: {
             type: DataTypes.BOOLEAN,
             field: 'is_special',
+            allowNull: false,
         },
         authorName: {
             field: 'author',
@@ -51,6 +54,7 @@ module.exports = (sequelize, DataTypes) => {
                 model: 'User',
                 key: 'name',
             },
+            allowNull: false,
         },
         screen: DataTypes.INTEGER,
         lesson: {

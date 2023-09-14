@@ -69,7 +69,7 @@ class AuthService
 
         const token = jwt.sign(
             {
-                user_id: user[0].id,
+                userId: user[0].id,
                 login,
                 name: user[0].name,
                 role: user[0]['Role.role'],
@@ -82,7 +82,7 @@ class AuthService
 
         const authUser = {
             token: token,
-            news: actualNotes.length + personalNotes.length - viewed.length,
+            unread: actualNotes.length + personalNotes.length - viewed.length,
             name: user[0].name,
             role: user[0]['Role.role'],
         }

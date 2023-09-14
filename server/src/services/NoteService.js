@@ -1,38 +1,151 @@
-require('dotenv').config();
-
-const Note = require('../../models/Note');
+const { Op } = require("sequelize");
+const { Note, User_Note } = require('../../models');
+const db = require("../../config/dbConfig");
 
 /**
  * Class NoteService
  *
  * @package src/services
  */
-class NoteService {
+class NoteService
+{
+    /**
+     * Получение полного списка уведомлений (при прочтении)
+     *
+     * @param params Входные GET параметры
+     * @return Promise<array> Список всех актуальных уведомлений в системе
+     */
+    async getAll(params)
+    {
+        const { user } = params;
+        const { unread } = params.body;
 
-    async getAll(req, res){
+        const notes = await Note.findAll({
+            where: {
+                [Op.or]: [
+                    {
+                        addressedTo: null,
+                    },
+                    {
+                        addressedTo: user.name,
+                    },
+                ],
+            },
+            order: [
+                [ 'createdAt', 'DESC' ],
+            ],
+            raw: true,
+        });
 
+        if (unread !== 0) {
+            await User_Note.destroy({
+                where: {
+                    userId: user.userId,
+                },
+            });
+
+            for (let i in notes) {
+                await User_Note.create({
+                    userId: user.userId,
+                    noteId: notes[i].id,
+                });
+            }
+        }
+
+        return notes;
     }
 
     /**
      * Получение списка уведомлений, отображаемых на трансляции
      *
-     * @param { * } req Входные GET парамтетры
-     * @return json Список уведомлений, отображаемых на трансляции
+     * @return Promise<array> Список уведомлений, отображаемых на трансляции
      */
-    async getFromCast(req, res) {
-
-        const notesOnCast = await Note.findAll({
+    async getFromCast()
+    {
+        return await Note.findAll({
             where: {
                 onBroadcast: true,
+                addressedTo: null,
             },
             order: [
-                ['createdAt', 'DESC'],
+                [ 'createdAt', 'DESC' ],
             ],
+            raw: true,
+        });
+    }
+
+    /**
+     * Добавить уведомление
+     *
+     * @param params Входные POST параметры
+     * @return Promise<Note> Добавленное уведомление
+     */
+    async addOne(params)
+    {
+        const { user } = params;
+        await this.checkRole(user.role);
+
+        const { name, comment, translate, unlimited } = params.body;
+        let { time } = params.body;
+
+        if (name === '' || comment === '') {
+            throw new Error('Поля "Заголовок" и "Содержимое" должны быть заполнены');
+        }
+
+        if (translate === undefined || unlimited === undefined || time === undefined) {
+            throw new Error('Нарушена целостность запроса.');
+        }
+
+        if (unlimited) {
+            time = "9999-01-01";
+        }
+
+        const note = await Note.create({
+            name: name,
+            comment: comment,
+            expires: time,
+            authorName: user.name,
+            onBroadcast: translate,
+            addressedTo: null,
         });
 
-        console.log(notesOnCast);
+        await User_Note.create({
+            userId: user.userId,
+            noteId: note.id,
+        });
 
-        return res.status(200).json({});
+        return note;
+    }
+
+    /**
+     * Удалить уведомление из системы
+     *
+     * @param params Входные POST параметры
+     * @return Promise<Note> Удаленное уведомление
+     */
+    async deleteOne(params)
+    {
+        const { user } = params;
+        await this.checkRole(user.role);
+
+        const { id } = params.body;
+        return await Note.destroy({
+            where: {
+                id: id,
+            },
+        });
+    }
+
+    /**
+     * Проверка наличия доступа к части функционала
+     *
+     * @param role Роль пользователя в системе
+     */
+    checkRole(role)
+    {
+        if (![ 'admin', 'moder', 'manager' ].includes(role)) {
+            throw new Error('Недостаточно прав доступа');
+        }
     }
 }
 

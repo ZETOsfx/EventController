@@ -45,18 +45,7 @@ module.exports = (sequelize, DataTypes) => {
                 model: 'User',
                 key: 'name',
             },
-        },
-        isPrivate: {
-            type: DataTypes.BOOLEAN,
-            field: 'is_private',
-        },
-        canView: {
-            type: DataTypes.BOOLEAN,
-            field: 'can_view',
-        },
-        lastEdit: {
-            type: DataTypes.STRING(20),
-            field: 'last_edit',
+            allowNull: false,
         },
         composeId: {
             field: 'compose_id',
@@ -67,7 +56,11 @@ module.exports = (sequelize, DataTypes) => {
             },
             allowNull: true,
         },
-        time_to_swap: DataTypes.TIME,
+        timeToSwap: {
+            field: "time_to_swap",
+            type: DataTypes.TIME,
+            allowNull: true,
+        },
 
     }, {
         sequelize,

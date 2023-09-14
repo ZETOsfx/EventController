@@ -59,7 +59,7 @@ module.exports = (sequelize, DataTypes) => {
         sequelize,
         modelName: 'Note',
         tableName: 'notes',
-        timestamps: true,
+        timestamps: false,
         underscored: true,
     });
 

@@ -3,7 +3,7 @@ const userService = require('../../services/UserService');
 const handle = async (req, res) => {
     try {
         res.status(200).json({
-            status: 'OK',
+            status: 'success',
             data: await userService.addOne(req),
         });
     } catch (error) {

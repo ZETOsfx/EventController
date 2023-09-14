@@ -241,18 +241,6 @@ exports.up = (pgm) => {
             onDelete: 'cascade',
             onUpdate: 'cascade',
         },
-        is_private: {
-            type: 'boolean',
-            notNull: true,
-        },
-        can_view: {
-            type: 'boolean',
-            notNull: true,
-        },
-        last_edit: {
-            type: 'varchar(20)',
-            notNull: true,
-        },
         compose_id: {
             type: "uuid",
             notNull: false,
