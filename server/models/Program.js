@@ -12,14 +12,12 @@ module.exports = (sequelize, DataTypes) => {
         static associate(models) {
             // define association here
             Program.hasMany(models.Event, {
-                sourceKey: 'id',
                 foreignKey: 'programId',
                 as: 'events',
             });
 
             Program.belongsTo(models.Compose, {
                 foreignKey: 'composeId',
-                targetKey: 'id',
                 as: 'compose',
             });
 
@@ -55,6 +53,12 @@ module.exports = (sequelize, DataTypes) => {
                 key: 'id',
             },
             allowNull: true,
+        },
+        isActive: {
+            field: "is_active",
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
         },
         timeToSwap: {
             field: "time_to_swap",

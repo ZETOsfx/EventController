@@ -12,20 +12,18 @@ module.exports = (sequelize, DataTypes) => {
         static associate(models) {
             // define association here
             Compose.hasMany(models.Program, {
-                sourceKey: 'id',
+                as: 'programs',
                 foreignKey: 'composeId',
             });
 
             Compose.hasOne(models.Request, {
-                sourceKey: 'id',
-                foreignKey: 'composeId',
                 as: 'request',
+                foreignKey: 'composeId',
             });
 
             Compose.belongsTo(models.User, {
                 foreignKey: 'authorName',
                 targetKey: 'name',
-                as: 'author',
             });
         }
     }
@@ -57,21 +55,6 @@ module.exports = (sequelize, DataTypes) => {
             allowNull: false,
         },
         screen: DataTypes.INTEGER,
-        lesson: {
-            type: DataTypes.UUID,
-            primaryKey: true,
-            allowNull: false,
-        },
-        breaktime: {
-            type: DataTypes.UUID,
-            primaryKey: true,
-            allowNull: false,
-        },
-        lunch: {
-            type: DataTypes.UUID,
-            primaryKey: true,
-            allowNull: false,
-        },
         status: {
             type: DataTypes.STRING(10),
             allowNull: false,

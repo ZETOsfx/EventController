@@ -1,6 +1,5 @@
 const { Op } = require("sequelize");
 const { Note, User_Note } = require('../../models');
-const db = require("../../config/dbConfig");
 
 /**
  * Class NoteService
@@ -34,7 +33,6 @@ class NoteService
             order: [
                 [ 'createdAt', 'DESC' ],
             ],
-            raw: true,
         });
 
         if (unread !== 0) {
@@ -62,7 +60,7 @@ class NoteService
      */
     async getFromCast()
     {
-        return await Note.findAll({
+        return Note.findAll({
             where: {
                 onBroadcast: true,
                 addressedTo: null,
@@ -70,7 +68,6 @@ class NoteService
             order: [
                 [ 'createdAt', 'DESC' ],
             ],
-            raw: true,
         });
     }
 
@@ -85,8 +82,8 @@ class NoteService
         const { user } = params;
         await this.checkRole(user.role);
 
-        const { name, comment, translate, unlimited } = params.body;
-        let { time } = params.body;
+        const { name, comment, translate, unlimited, addressedTo } = params.body;
+        let { time } = params?.body;
 
         if (name === '' || comment === '') {
             throw new Error('Поля "Заголовок" и "Содержимое" должны быть заполнены');
@@ -106,13 +103,15 @@ class NoteService
             expires: time,
             authorName: user.name,
             onBroadcast: translate,
-            addressedTo: null,
+            addressedTo: addressedTo | null,
         });
 
-        await User_Note.create({
-            userId: user.userId,
-            noteId: note.id,
-        });
+        if (!addressedTo) {
+            await User_Note.create({
+                userId: user.userId,
+                noteId: note.id,
+            });
+        }
 
         return note;
     }
@@ -129,7 +128,8 @@ class NoteService
         await this.checkRole(user.role);
 
         const { id } = params.body;
-        return await Note.destroy({
+
+        return Note.destroy({
             where: {
                 id: id,
             },
@@ -143,7 +143,7 @@ class NoteService
      */
     checkRole(role)
     {
-        if (![ 'admin', 'moder', 'manager' ].includes(role)) {
+        if (![ 'admin', 'moderator', 'manager' ].includes(role)) {
             throw new Error('Недостаточно прав доступа');
         }
     }

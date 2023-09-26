@@ -1,10 +1,9 @@
 require('dotenv').config();
 
-const PORT = process.env.SERVER_PORT;
+const PORT = process.env.SERVER_PORT || 5000;
 
 const http = require('http');
 const express = require('express');
-// const cron = require('node-cron');
 
 const path = require('path');
 const cors = require('cors');
@@ -45,6 +44,8 @@ app.use(
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 
+// // --- Connect Vue.js interface ---
+//
 // app.get('/js/vue.js', (req, res) => {
 //     res
 //         .header("Content-Type", "application/javascript; charset=UTF-8")
@@ -62,6 +63,9 @@ app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 
 const getRoutes = require('./src/router');
 getRoutes(app);
+
+const startCron = require('./crontab');
+startCron();
 
 db.sequelize.sync().then((req) => {
     server.listen(PORT, (error) => {

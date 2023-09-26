@@ -16,6 +16,7 @@ module.exports = (sequelize, DataTypes) => {
             User.belongsTo(Role, {
                 foreignKey: 'roleId',
                 targetKey: 'id',
+                as: 'role',
             });
 
             User.belongsToMany(Subscribe, {

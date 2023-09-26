@@ -1,5 +1,4 @@
 const authMw = require("./middleware/authMiddleware");
-const EventController = require("./controller/EditorService");
 
 function getRoutes(app)
 {
@@ -21,6 +20,9 @@ function getRoutes(app)
     /** Отправка уведомлений об ошибках */
     app.post('/report', authMw, require('./handlers/reportHandler'));
 
+    /** Получение списка транслируемых событий */
+    app.get('/cast', require('./handlers/castHandler'));
+
     /** Работа по настройке трансляции */
     app.get('/setting/all', require('./handlers/setting/getWorkingDataHandler'));
 
@@ -36,8 +38,7 @@ function getRoutes(app)
     app.post('/setting/compose/send', authMw, require('./handlers/setting/Compose/sendComposeHandler'));
     // app.get('/setting/compose/program', authMw, EventController.eventsFromTmpInCompose);
 
-    /** Получение событий для вывода на трансляцию */
-    app.get('/cast', EventController.getEventsFormatJSON);
+    app.get('/control', require('./handlers/control/getAllRequestsHandler'));
 }
 
 module.exports = getRoutes;

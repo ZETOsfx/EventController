@@ -6,8 +6,6 @@ redis-stable/*
 sql
 sql/*
 dump.rdb
-crontabfile
-entrypoint.bash
 
 # Editor directories and files
 .vscode

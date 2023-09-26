@@ -197,18 +197,6 @@ exports.up = (pgm) => {
             type: 'integer',
             notNull: false,
         },
-        lesson: {
-            type: 'varchar(30)',
-            notNull: false,
-        },
-        breaktime: {
-            type: 'varchar(30)',
-            notNull: false,
-        },
-        lunch: {
-            type: 'varchar(30)',
-            notNull: false,
-        },
         status: {
             type: 'varchar(10)',
             notNull: false,
@@ -247,6 +235,11 @@ exports.up = (pgm) => {
             references: '"composes" (id)',
             onDelete: 'set null',
             onUpdate: 'cascade',
+        },
+        is_active: {
+            type: 'boolean',
+            notNull: true,
+            default: false,
         },
         time_to_swap: {
             type: 'time',
@@ -317,7 +310,11 @@ exports.up = (pgm) => {
         },
         approved: {
             type: 'varchar(16)',
-            notNull: true,
+            notNull: false,
+        },
+        changer: {
+            type: 'varchar(16)',
+            notNull: false,
         },
         is_active: {
             type: 'boolean',
@@ -442,10 +439,6 @@ exports.up = (pgm) => {
             type: 'date',
             notNull: false,
         },
-        can_edit: {
-            type: 'boolean',
-            notNull: true,
-        },
         is_unlimited: {
             type: 'boolean',
             notNull: true,
@@ -472,7 +465,7 @@ exports.up = (pgm) => {
      * Password: 1
      */
     pgm.sql(`INSERT INTO users (name, role_id, pass_hash, login) VALUES (
-        'Admin', 
+        'System', 
         (SELECT id FROM roles WHERE role = 'admin'), 
         '$argon2id$v=19$m=65536,t=3,p=4$UiEDINhI5e0tQ9CN9uQRPA$51V+HYjZ6u5O0T5ZcxdYGLBATOhu8XMpvOVvZhG4jzc', 
         'admin'

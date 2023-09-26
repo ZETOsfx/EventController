@@ -28,12 +28,14 @@ class UserService
         }
 
         const userExists = await this.isUserExists(name, login);
-        if (userExists !== undefined) {
+
+        if (userExists.id) {
             throw new Error('Пользователь с данным логином или именем уже существует');
         }
 
         const roleExists = await this.isRoleExists(role);
-        if (roleExists === undefined) {
+
+        if (!roleExists.id) {
             throw new Error('Некорректный параметр: РОЛЬ');
         }
 
@@ -67,8 +69,6 @@ class UserService
             include: {
                 model: Role,
             },
-            nested: true,
-            raw: true,
         });
 
         users.forEach(user => {
@@ -101,20 +101,23 @@ class UserService
         }
 
         const userExists = await this.isUserExists(name, login);
-        if (userExists === undefined) {
+
+        if (!userExists.id) {
             throw new Error('Пользователь с данными логином и именем не существует');
         }
 
         const roleExists = await this.isRoleExists(role);
-        if (roleExists === undefined) {
+
+        if (!roleExists.id) {
             throw new Error('Некорректный параметр: РОЛЬ');
         }
 
         const hashedPassword = await argon2.hash(password);
-        let user;
+
+        let updated;
 
         if (password !== '') {
-            user = await User.update({
+            updated = await User.update({
                 login: login,
                 name: name,
                 roleId: roleExists.id,
@@ -122,21 +125,21 @@ class UserService
             }, {
                 where: {
                     id: id,
-                }
+                },
             });
         } else {
-            user = await User.update({
+            updated = await User.update({
                 login: login,
                 name: name,
                 roleId: roleExists.id,
             }, {
                 where: {
                     id: id,
-                }
+                },
             });
         }
 
-        return user;
+        return 'Updated: ' + updated[0];
     }
 
     /**
@@ -151,20 +154,13 @@ class UserService
 
         const { id } = params.body;
 
-        let user;
+        let user = await User.destroy({
+            where: {
+                id: id,
+            },
+        });
 
-        try {
-            user = await User.destroy({
-                where: {
-                    id: id,
-                }
-            });
-        } catch (err) {
-            console.log(err);
-            throw new Error(err);
-        }
-
-        return user;
+        return user[0] ? 'OK' : 'NULL DELETE';
     }
 
     /**
@@ -185,11 +181,12 @@ class UserService
      *
      * @param name Имя аккаунта
      * @param login Логин аккаунта
-     * @return User Аккаунт / undefined
+     * @option
+     * @return Promise Аккаунт / undefined
      */
     async isUserExists(name, login)
     {
-        const userExists = await User.findAll({
+        return await User.findOne({
             where: {
                 [Op.or]: [
                     {
@@ -197,29 +194,24 @@ class UserService
                     },
                     {
                         name: name,
-                    },
-                ]
-            }
+                    }, ],
+            },
         });
-
-        return userExists[0];
     }
 
     /**
      * Наличие указанной роли в системе (проверка на корректность)
      *
      * @param role Роль для проверки на наличие
-     * @return Role Роль / undefined
+     * @return Promise Роль / undefined
      */
     async isRoleExists(role)
     {
-        const roleExists = await Role.findAll({
+        return Role.findOne({
             where: {
                 role: role,
-            }
+            },
         });
-
-        return roleExists[0];
     }
 }
 

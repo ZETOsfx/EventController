@@ -33,10 +33,6 @@ module.exports = (sequelize, DataTypes) => {
             },
         },
         expires: DataTypes.DATE,
-        canEdit: {
-            field: 'can_edit',
-            type: DataTypes.BOOLEAN,
-        },
         isUnlimited: {
             field: 'is_unlimited',
             type: DataTypes.BOOLEAN,

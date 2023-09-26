@@ -1,5 +1,5 @@
 const { Op } = require("sequelize");
-const { Event, Program, Compose } = require('../../models');
+const { Event, Program, Compose, Request } = require('../../models');
 
 /**
  * Class ProgramService
@@ -10,75 +10,38 @@ const { Event, Program, Compose } = require('../../models');
 class ProgramService
 {
     /**
-     * Получить рабочий материал для настройки трансляции
-     * -> свои рабочие шаблоны (не скомпонованные)
-     * -> все существующие композиции
+     * Получить список всех собственных программ пользователя, не вложенных в композиции
      *
      * Для programs:
      * -> composeId - флаг проверки вложенности в композицию (null - не вложен)
      *
      * @return Promise<json> Запрашиваемые данные в виде объекта
      */
-    async getWorkingData(params)
+    async getAll(params)
     {
         const { user } = params;
         this.checkRole(user.role);
 
-        const programs = await Program.findAll({
+        return Program.findAll({
+            nest: true,
             where: {
                 authorName: user.name,
+                composeId: null,
+            },
+            include: {
+                as: 'events',
+                model: Event,
+                attributes: [ 'id', 'name', 'src', 'type', 'time', 'order' ],
             },
             order: [
                 [ 'createdAt', 'DESC' ],
+                [
+                    { model: Event, as: 'events' },
+                    'order', 'ASC'
+                ],
             ],
-            nested: true,
-            raw: true,
+            attributes: [ 'id', 'name' ],
         });
-
-        const userComposes = await Compose.findAll({
-            where: {
-                authorName: user.name,
-            },
-            order: [
-                [ 'createdAt', 'DESC' ],
-            ],
-            nested: true,
-            raw: true,
-        });
-
-        const otherComposes = await Compose.findAll({
-            where: {
-                authorName: {
-                    [Op.ne]: user.name,
-                },
-            },
-            order: [
-                [ 'createdAt', 'DESC' ],
-            ],
-            nested: true,
-            raw: true,
-        });
-
-        // for (let index in userComposes) {
-        //     if (userComposes[index].isSpecial) {
-        //
-        //         userComposes[index].spectemplates = await db('tmp_cmp')
-        //             .select('*')
-        //             .where('from', composes[index].id)
-        //             .orderBy('time_to_swap');
-        //
-        //         for (let i in composes[index].spectemplates) {
-        //             let time = composes[index].spectemplates[i].time_to_swap;
-        //             composes[index].spectemplates[i].time_to_swap = time.substring(0, 5);
-        //         }
-        //     }
-        // }
-
-        return {
-            programs: programs,
-            myComposes: userComposes,
-            otherComposes: otherComposes,
-        };
     }
 
     /**
@@ -92,21 +55,25 @@ class ProgramService
         const { user } = params;
         this.checkRole(user.role);
 
-        const { programId, programName } = params.body;
+        const { id } = params?.body;
 
-        if (!await this.programExists(programName, user.name)) {
-            throw new Error('Запрашиваемая программа не существует');
-        }
-
-        return await Event.findAll({
+        return Program.findOne({
+            nest: true,
             where: {
-                programId: programId,
-                programName: programName,
+                id: id,
             },
-            raw: true,
+            include: {
+                as: 'events',
+                model: Event,
+                attributes: [ 'id', 'name', 'src', 'type', 'time', 'order' ],
+            },
             order: [
-                [ 'order' ],
-            ]
+                [
+                    { model: Event, as: 'events' },
+                    'order', 'ASC'
+                ],
+            ],
+            attributes: [ 'id', 'name' ],
         });
     }
 
@@ -121,40 +88,47 @@ class ProgramService
         const { user } = params;
         this.checkRole(user.role);
 
-        const { name, tmpType } = params.body;
+        const { name, type } = params?.body;
 
         if (name.length > 30) {
             throw new Error('Слишком длинное имя программы');
         }
 
-        if (await this.programExists(name, user.name)) {
+        const test = await Program.findOne({
+            where: {
+                name: name,
+                authorName: user.name,
+            },
+        });
+
+        if (test instanceof Program) {
             throw new Error('Программа с заданным именем уже существует');
         }
 
-        const newProgram = await Program.create({
+        const program = await Program.create({
             name: name,
             authorName: user.name,
             composeId: null,
             timeToSwap: null,
         });
 
-        switch (tmpType) {
+        switch (type) {
             case 'empty':
                 break;
             case 'copy':
-                const { events } = params.body;
+                const { events } = params?.body;
 
                 let order = 1;
                 for (let i in events) {
                     try {
-                        const event = await Event.create({
+                        await Event.create({
                             name: events[i].name,
                             src: events[i].src,
                             order: order,
                             isActive: true,
                             type: events[i].type,
                             time: events[i].time,
-                            programId: newProgram.id,
+                            programId: program.id,
                         });
 
                         order++;
@@ -174,7 +148,7 @@ class ProgramService
                         isActive: true,
                         type: 'webform',
                         time: 40,
-                        programId: newProgram.id,
+                        programId: program.id,
                     }, { transaction: t });
                     await Event.create({
                         name: "Карта К3",
@@ -183,7 +157,7 @@ class ProgramService
                         isActive: true,
                         type: 'webform',
                         time: 15,
-                        programId: newProgram.id,
+                        programId: program.id,
                     }, { transaction: t });
                     await Event.create({
                         name: "Карта Артек",
@@ -192,7 +166,7 @@ class ProgramService
                         isActive: true,
                         type: 'webform',
                         time: 15,
-                        programId: newProgram.id,
+                        programId: program.id,
                     }, { transaction: t });
                     await Event.create({
                         name: "К3 - Артек",
@@ -201,7 +175,7 @@ class ProgramService
                         isActive: true,
                         type: 'webform',
                         time: 15,
-                        programId: newProgram.id,
+                        programId: program.id,
                     }, { transaction: t });
                     await Event.create({
                         name: "Аудитории - Гидра",
@@ -210,7 +184,7 @@ class ProgramService
                         isActive: true,
                         type: 'webform',
                         time: 15,
-                        programId: newProgram.id,
+                        programId: program.id,
                     }, { transaction: t });
                     await Event.create({
                         name: "Гидра - Влажность",
@@ -219,7 +193,7 @@ class ProgramService
                         isActive: true,
                         type: 'webform',
                         time: 15,
-                        programId: newProgram.id,
+                        programId: program.id,
                     }, { transaction: t });
                     await Event.create({
                         name: "Гидра - Температура",
@@ -228,7 +202,7 @@ class ProgramService
                         isActive: true,
                         type: 'webform',
                         time: 15,
-                        programId: newProgram.id,
+                        programId: program.id,
                     }, { transaction: t });
 
                     await t.commit();
@@ -238,17 +212,12 @@ class ProgramService
                 }
         }
 
-        const events = await Event.findAll({
-            where: {
-                programId: newProgram.id,
+        return await this.getOne({
+            user: user,
+            body: {
+                id: program.id,
             },
-            raw: true,
         });
-
-        return {
-            program: newProgram,
-            events: events,
-        };
     }
 
     /**
@@ -262,12 +231,12 @@ class ProgramService
         const { user } = params;
         this.checkRole(user.role);
 
-        const { programId, events } = params.body;
+        const { id, events } = params?.body;
 
         await Event.destroy({
             where: {
-                programId: programId,
-            }
+                programId: id,
+            },
         });
 
         let order = 1;
@@ -280,7 +249,7 @@ class ProgramService
                     type: events[i].type,
                     order: order,
                     isActive: true,
-                    programId: programId,
+                    programId: id,
                 });
 
                 order++;
@@ -289,24 +258,12 @@ class ProgramService
             }
         }
 
-        const program = await Program.findOne({
-            where: {
-                id: programId,
+        return await this.getOne({
+            user: user,
+            body: {
+                id: id,
             },
-            raw: true,
         });
-
-        const newEvents = await Event.findAll({
-            where: {
-                programId: programId,
-            },
-            raw: true,
-        });
-
-        return {
-            program: program,
-            events: newEvents,
-        };
     }
 
     /**
@@ -319,9 +276,9 @@ class ProgramService
         const { user } = params;
         this.checkRole(user.role);
 
-        const { programId } = params.body;
+        const { programId } = params?.body;
 
-        await Program.destroy({
+        return Program.destroy({
             where: {
                 id: programId,
             },
@@ -329,23 +286,66 @@ class ProgramService
     }
 
     /**
-     * Проверка наличия в системе программы с указанным именем
+     * Получить данные активной программы в формате JSON (вывод на трансляцию)
      *
-     * @param programName Имя программы, которое необходимо проверить
-     * @param username Имя автора программы
-     * @return Promise<boolean> Наличие программы с подобным именем
+     * @return {Promise<*>} Список страниц для трансляции
      */
-    async programExists(programName, username)
+    async getActiveJSON()
     {
-        const program = await Program.findAll({
+        const request = await Request.findOne({
+            nest: true,
             where: {
-                name: programName,
-                authorName: username,
+                isActive: true,
             },
-            raw: true,
+            include: {
+                as: 'compose',
+                model: Compose,
+                include: {
+                    as: 'programs',
+                    model: Program,
+                    where: {
+                        isActive: true,
+                    },
+                    include: {
+                        as: 'events',
+                        model: Event,
+                        attributes: [ 'src', 'type' ],
+                    },
+                    attributes: [ 'id', 'name' ],
+                },
+                attributes: [ 'id', 'name' ],
+            },
+            attributes: [ 'id' ],
+            order: [
+                [
+                    { model: Compose, as: 'compose' },
+                    { model: Program, as: 'programs' },
+                    { model: Event, as: 'events' },
+                    'order', 'ASC'
+                ],
+            ],
         });
 
-        return program.length > 0;
+        let eventsJson = [];
+        let datetimeOrder = (new Date()).getTime();
+        const events = request.compose.programs[0].events;
+
+        for (let i in events) {
+            eventsJson.push({
+                time: new Date(datetimeOrder),
+                type: events[i].type,
+                src: events[i].src,
+            });
+            datetimeOrder += events[i].time * 1000;
+        }
+
+        eventsJson.push({
+            time: new Date(datetimeOrder),
+            type: "end",
+            src: "src"
+        });
+
+        return eventsJson;
     }
 
     /**
@@ -355,7 +355,7 @@ class ProgramService
      */
     checkRole(role)
     {
-        if (![ 'admin', 'moder', 'editor' ].includes(role)) {
+        if (![ 'admin', 'moderator', 'editor' ].includes(role)) {
             throw new Error('Недостаточно прав доступа');
         }
     }

@@ -12,15 +12,13 @@ module.exports = (sequelize, DataTypes) => {
         static associate(models) {
             // define association here
             Request.belongsTo(models.Compose, {
-                foreignKey: 'composeId',
-                targetKey: 'id',
                 as: 'compose',
+                foreignKey: 'composeId',
             });
 
             Request.belongsTo(models.User, {
-                foreignKey: 'approved',
+                foreignKey: { name: 'approved', allowNull: true, },
                 targetKey: 'name',
-                as: 'approver',
             });
         }
     }
@@ -47,7 +45,11 @@ module.exports = (sequelize, DataTypes) => {
         },
         approved: {
             type: DataTypes.STRING(16),
-            allowNull: false,
+            allowNull: true,
+        },
+        changer: {
+            type: DataTypes.STRING(16),
+            allowNull: true,
         },
         isActive: {
             field: 'is_active',

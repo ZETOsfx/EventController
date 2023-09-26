@@ -1,6 +1,6 @@
 const { Op } = require("sequelize");
-const { Event, Program, Compose } = require('../../models');
-const db = require("../../config/dbConfig");
+const { Program, Compose, Event } = require('../../models');
+const programService = require('./ProgramService');
 
 /**
  * Class ProgramService
@@ -10,6 +10,81 @@ const db = require("../../config/dbConfig");
  */
 class ComposeService
 {
+    /**
+     * Получить все композиции (собственные для пользователя + все остальные)
+     *
+     * @param params Входные GET параметры
+     * @return {Promise<{otherComposes: *, userComposes: *}>} Композиции запрашивающего + все остальные
+     */
+    async getAll(params)
+    {
+        const { user } = params;
+        this.checkRole(user.role);
+
+        return {
+            userComposes: await Compose.findAll({
+                nest: true,
+                where: {
+                    authorName: user.name,
+                },
+                include: {
+                    as: 'programs',
+                    model: Program,
+                    include: {
+                        as: 'events',
+                        model: Event,
+                        attributes: [ 'id', 'name', 'src', 'type', 'time', 'order' ],
+                    },
+                    attributes: [ 'id', 'name', 'timeToSwap', 'isActive' ],
+                },
+                attributes: [ 'id', 'name', 'comment', 'date', 'isSpecial', 'authorName', 'screen', 'status', 'message' ],
+                order: [
+                    [
+                        { model: Program, as: 'programs' },
+                        'timeToSwap', 'ASC'
+                    ],
+                    [
+                        { model: Program, as: 'programs' },
+                        { model: Event, as: 'events' },
+                        'order', 'ASC'
+                    ],
+                    [ 'createdAt', 'DESC' ],
+                ],
+            }),
+            otherComposes: await Compose.findAll({
+                nest: true,
+                where: {
+                    authorName: {
+                        [Op.ne]: user.name,
+                    },
+                },
+                include: {
+                    as: 'programs',
+                    model: Program,
+                    include: {
+                        as: 'events',
+                        model: Event,
+                        attributes: [ 'id', 'name', 'src', 'type', 'time', 'order' ],
+                    },
+                    attributes: [ 'id', 'name', 'timeToSwap', 'isActive' ],
+                },
+                attributes: [ 'id', 'name', 'comment', 'date', 'isSpecial', 'authorName', 'screen', 'status', 'message' ],
+                order: [
+                    [
+                        { model: Program, as: 'programs' },
+                        'timeToSwap', 'ASC'
+                    ],
+                    [
+                        { model: Program, as: 'programs' },
+                        { model: Event, as: 'events' },
+                        'order', 'ASC'
+                    ],
+                    [ 'createdAt', 'DESC' ],
+                ],
+            }),
+        };
+    }
+
     /**
      * Получить события программ внутри композиции (кнопка "Подробнее")
      *
@@ -26,132 +101,66 @@ class ComposeService
         const { user } = params;
         this.checkRole(user.role);
 
-        const { composeId, changedTemplates } = params.body;
-        const compose = await Compose.findOne({
+        const { id } = params?.body;
+
+        return Compose.findOne({
+            nest: true,
             where: {
-                id: composeId,
+                id: id,
             },
-            nested: true,
-            raw: true,
+            include: {
+                as: 'programs',
+                model: Program,
+                include: {
+                    as: 'events',
+                    model: Event,
+                    attributes: [ 'id', 'name', 'src', 'type', 'time', 'order' ],
+                },
+                attributes: [ 'id', 'name', 'timeToSwap', 'isActive' ],
+            },
+            attributes: [ 'id', 'name', 'comment', 'date', 'isSpecial', 'authorName', 'screen', 'status', 'message' ],
+            order: [
+                [
+                    { model: Program, as: 'programs' },
+                    'timeToSwap', 'ASC'
+                ],
+                [
+                    { model: Program, as: 'programs' },
+                    { model: Event, as: 'events' },
+                    'order', 'ASC'
+                ],
+            ],
         });
-
-        if (compose.isSpecial) {
-            const templates = changedTemplates;
-            let eventsFromPrograms = [];
-
-            for (let i in templates) {
-                templates[i].events = await Event.findAll({
-                    where: {
-                        programId: templates[i],
-                    },
-                    order: [
-                        [ 'order' ],
-                    ],
-                    raw: true,
-                });
-                eventsFromPrograms.push(templates[i]);
-            }
-
-            return {
-                type: compose.isSpecial,
-                data: eventsFromPrograms,
-            };
-
-        } else {
-            let eventsFromPrograms = {};
-
-            let programIds = {
-                lessonId: compose.lesson,
-                breaktimeId: compose.breaktime,
-                lunchId: compose.lunch,
-            };
-
-            if (changedTemplates === null) {
-                programIds = {
-                    lessonId: changedTemplates[0],
-                    breaktimeId: changedTemplates[1],
-                    lunchId: changedTemplates[2],
-                };
-            }
-
-            const lessonProgram = await Program.findOne({
-                where: {
-                    id: programIds.lessonId,
-                },
-                raw: true,
-            }, {
-                fields: [ 'id' ],
-            });
-
-            const breakProgram = await Program.findOne({
-                where: {
-                    id: programIds.breaktimeId,
-                },
-                raw: true,
-            }, {
-                fields: [ 'id' ],
-            });
-
-            const lunchProgram = await Program.findOne({
-                where: {
-                    id: programIds.lunchId,
-                },
-                raw: true,
-            }, {
-                fields: [ 'id' ],
-            });
-
-
-            eventsFromPrograms.lesson = await Event.findAll({
-                where: {
-                    programId: lessonProgram.id,
-                },
-                raw: true,
-            });
-            eventsFromPrograms.breaktime = await Event.findAll({
-                where: {
-                    programId: breakProgram.id,
-                },
-                raw: true,
-            });
-            eventsFromPrograms.lunch = await Event.findAll({
-                where: {
-                    programId: lunchProgram.id,
-                },
-                raw: true,
-            });
-
-            return {
-                type: compose.isSpecial,
-                data: eventsFromPrograms,
-            };
-        }
     }
-
 
     /**
      * Собрать композицию
      *
-     * param { * }         req
-     * param { name }      req  NAME for new compose
-     * param { screen }    req  TARGET SCREEN for new compose
-     * param { isSpec }    req  TYPE of new compose
-     * param { comment }   req  COMMENT (for descriptions)
-     * param { programs }  req  list of TEMPLATES included new compose
-     * param { times }     req  list of TIMINGS from template
-     * param { * }         res  op. status + new list with composes / message for client
+     * - name : Имя новой композиции
+     * - screen : Экран, на который планируется транслировать композицию
+     * - programsId : Список ID программ, которые должны быть включены в композицию
+     * - times : Список меток времени, в которые должны происходить переходы между программами
+     * - isSpec : Тип новой композиции (специальная / стандартная)
+     * - comment : Комментарий к композиции (не обязательно)
+     *
+     * @param params Входные POST параметры
+     * @return { compose, programs } Новая композиция в виде объекта и список ее программ
      */
     async addOne(params)
     {
         const { user } = params;
         this.checkRole(user.role);
 
-        const { name, screen, programs, times, isSpec = false, comment = '' } = params?.body;
+        const { name, screen, programsId, times, isSpec, comment = '' } = params?.body;
 
-        // PROGRAMS и TIMES - сопоставленные по индексам списки (соответственно по имени и времени переключения)
-        // Для стандартного шаблона TIMES может быть пустым.
+        const test = await Compose.findOne({
+            where: {
+                name: name,
+                authorName: user.name,
+            },
+        });
 
-        if (await this.composeExists(name, user.name)) {
+        if (test instanceof Compose) {
             throw new Error('Программа с таким заголовком уже существует. Для однозначной идентификации придумайте другой');
         }
 
@@ -161,155 +170,216 @@ class ComposeService
         let year = date.getFullYear();
         let currentDate = year + '-' + month + '-' + day;
 
-        if (isSpec) {
-            if (!name || programs.length === 0 || !screen) {
+        if (isSpec === true) {
+            if (!name || programsId.length === 0 || !screen) {
                 throw new Error('Композиция должна включать хотя бы одну программу');
             }
+            if (programsId.length !== times.length) {
+                throw new Error('Некорректный запрос: не для всех шаблонов задано время.');
+            }
+        } else {
+            if (!name || (programsId[0] === '-' || programsId[1] === '-' || programsId[2] === '-') || !screen) {
+                throw new Error('Некорректный запрос');
+            }
 
-            const compose = await Compose.create({
-                name: name,
-                comment: comment,
-                date: currentDate,
-                isSpecial: true,
-                authorName: user.name,
-                screen: screen,
+            const programs = await Program.findAll({
+                where: {
+                    id: {
+                        [Op.or]: programsId,
+                    }
+                },
             });
 
-            // ----------- МОЯ ОСТАНОВОЧКА. Тут крч планета остановилась и я сошел. ----------- //
-
-            for (let index in programs) {
-                const specTemp = await db('tmp').select('*').where('name', programs[index]);
-                const eventsTemp = await db('events_tmp').select('*').where('tmpid', specTemp[0].id);
-
-                delete specTemp[0].id;
-                specTemp[0].from = request[0].id;
-                specTemp[0].time_to_swap = times[index];
-                const newTmp = await db('tmp_cmp').insert(specTemp[0]).returning('*');
-                for (let i in eventsTemp) {
-                    delete eventsTemp[i].id;
-                    eventsTemp[i].tmpid = newTmp[0].id;
-                    await db('events_tmp_cmp').insert(eventsTemp[i]);
-                }
+            if (programs.length !== 3) {
+                throw new Error('Некорректный ID');
             }
-
-            const sptmp = await db('tmp_cmp').select('*').where('from', request[0].id).orderBy('time_to_swap');
-
-            for (let i in sptmp)
-                sptmp[i].time_to_swap = sptmp[i].time_to_swap.substring(0, 5);
-
-            return res.status(200).json({ message: '-', cmp: request, spec: sptmp });
-        } else {
-            // PROGRAMS
-            // [0] - имя шаблона на пары
-            // [1] - имя шаблона на перерыв
-            // [2] - имя шаблона на обед
-            if (!(name && (programs[0] !== '-' || programs[1] !== '-' || programs[2] !== '-') && screen))
-                return res.status(200).json({ message: 'Некорректные параметры шаблона стандартного типа. Проверьте правильность заполнения полей в форме отправки.' });
-
-            let originTemp = [];
-            let active;
-
-            if (programs[0] !== '-') {
-                const stud_tmp = await db('tmp').select('*').where('name', programs[0]);
-                originTemp.push(stud_tmp[0]);
-            } else {
-                // если оставлять без изменений, подстановка будет происходить из активной трансляции
-                active = await db('events_req_form').select('*').where('isActive', true);
-                if (!active[0])
-                    return res.status(200).json({ message: 'Нет активных шаблонов. Поля не могут быть пустыми.' });
-
-                if (active[0].lesson !== '-') {
-                    const stud_tmp = await db('tmp').select('*').where('name', active[0].lesson);
-                    programs[0] = active[0].lesson;
-                    originTemp.push(stud_tmp[0]);
-                } else
-                    return res.status(200).json({ message: 'В активном шаблоне отсутствует программа на ПАРЫ.\nПожалуйста, заполните данное поле.' });
-            }
-
-            if (programs[1] !== '-') {
-                // Если в одном запросе стоит несколько одинаковых шаблонов, не нужно дублировать резервные копии
-                if (programs[1] !== programs[0]) {
-                    const break_tmp = await db('tmp').select('*').where('name', programs[1]);
-                    originTemp.push(break_tmp[0]);
-                }
-            } else {
-                active = await db('events_req_form').select('*').where('isActive', true);
-                if (!active[0])
-                    return res.status(200).json({ message: 'Нет активных шаблонов. Поля не могут быть пустыми.' });
-
-                if (active[0].breaktime !== '-') {
-                    let break_tmp = await db('tmp').select('*').where('name', active[0].breaktime);
-                    programs[1] = active[0].breaktime;
-                    originTemp.push(break_tmp[0]);
-                } else
-                    return res.status(200).json({ message: 'В активном шаблоне отсутствует программа на ПЕРЕРЫВ.\nПожалуйста, заполните данное поле.' });
-            }
-
-            if (programs[2] !== '-') {
-                if (programs[2] !== programs[1] && programs[2] !== programs[0]) {
-                    const lunch_tmp = await db('tmp').select('*').where('name', programs[2]);
-                    originTemp.push(lunch_tmp[0]);
-                }
-            } else {
-                active = await db('events_req_form').select('*').where('isActive', true);
-                if (!active[0])
-                    return res.status(200).json({ message: 'Нет активных шаблонов. Поля не могут быть пустыми.' });
-
-                if (active[0].lunch !== '-') {
-                    let lunch_tmp = await db('tmp').select('*').where('name', active[0].lunch);
-                    programs[2] = active[0].lunch;
-                    originTemp.push(lunch_tmp[0]);
-                } else
-                    return res.status(400).json({ message: 'В активном шаблоне отсутствует программа на ОБЕД.\nПожалуйста, заполните данное поле.' });
-            }
-            // Если все окей, вносим скомпанованную программу в хранилище
-            const reeq = await db('composed').insert({
-                name: name,                         // Заголовок запроса на модерацию
-                comment: comment,                   // Комментарий редактора для модератора
-                date: targetDate,                   // Дата, на которую хочет поставить редактор
-                isspecial: false,                   // Метка специального расписания
-                author: req.user.name,              // Автор запроса на установку
-                lesson: programs[0],                // Программа трансляции - Время занятий
-                breaktime: programs[1],             // Программа трансляции - Время перерыва между занятиями
-                lunch: programs[2],                 // Программа трансляции - Время обеда
-                screen: screen,                     // Экран, на который необходимо установить трансляцию
-            }).returning('*');
-
-            for (let j in originTemp) {
-                // Все события указанных при отправке шаблонов
-                const eventsTemp = await db('events_tmp').select('*').where('tmpid', originTemp[j].id);
-                delete originTemp[j].id;
-                originTemp[j].from = reeq[0].id;
-                const newTmp = await db('tmp_cmp').insert(originTemp[j]).returning("*");
-                for (let i in eventsTemp) {
-                    delete eventsTemp[i].id;
-                    eventsTemp[i].tmpid = newTmp[0].id;
-                    await db('events_tmp_cmp').insert(eventsTemp[i]);
-                }
-            }
-            return res.status(200).json({ message: '-', cmp: reeq });
         }
-    }
 
-
-    /**
-     * Проверка наличия в системе композиции с указанным именем
-     *
-     * @param composeName Имя композиции, которое необходимо проверить
-     * @param username Имя автора композиции
-     * @return Promise<boolean> Наличие композиции с подобным именем
-     */
-    async composeExists(composeName, username)
-    {
-        const compose = await Compose.findAll({
-            where: {
-                name: composeName,
-                authorName: username,
-            },
-            raw: true,
+        const compose = await Compose.create({
+            name: name,
+            comment: comment,
+            date: currentDate,
+            isSpecial: isSpec,
+            authorName: user.name,
+            screen: screen,
         });
 
-        return compose.length > 0;
+        let timings = times;
+
+        if (!isSpec) {
+            timings = [ '08:40:00', '10:15:00', '12:00:00' ];
+        }
+
+        for (let index in programsId) {
+            const updatedTemplate = await Program.update({
+                composeId: compose.id,
+                timeToSwap: timings[index],
+            }, {
+                where: {
+                    id: programsId[index],
+                },
+            });
+
+            if (updatedTemplate[0] === 0) {
+                throw new Error('Некорректный ID: ' + programsId);
+            }
+        }
+
+        return await this.getOne({
+            user: user,
+            body: {
+                id: compose.id,
+            },
+        });
+    }
+
+    /**
+     * Удалить композицию
+     *
+     * - id : ID композиции, которую нужно удалить
+     * - withPrograms (true / false) : Удалить вместе с программами?
+     *
+     * @param params Входные DELETE параметры
+     * @return
+     */
+    async deleteOne(params)
+    {
+        const { user } = params;
+        this.checkRole(user.role);
+
+        const { id, withPrograms, byModer } = params?.body;
+
+        const compose = await Compose.findOne({
+            where: {
+                id: id,
+                authorName: user.name,
+            },
+        });
+
+        if (!compose.id && !byModer) {
+            throw new Error('Попытка удалить не свою композицию.');
+        }
+
+        if (!withPrograms) {
+            await Program.update({
+                timeToSwap: null,
+                composeId: null,
+            }, {
+                where: {
+                    composeId: compose.id
+                },
+            });
+        }
+
+        return Compose.destroy({
+            where: {
+                id: id,
+                authorName: user.name,
+            },
+        });
+    }
+
+    /**
+     * Внести изменения в существующую композицию
+     *
+     * - id : ID композиции, в которую вносятся изменения
+     * - programs : список с новыми программами в композиции
+     *      > 3 для стандартной программы (в порядке: пары - перерыв - обед)
+     *      > ANY для особой программы
+     * - timingList : список переключения программ по времени внутри композиции
+     *      > существует только для особого типа
+     *      > число элементов совпадает с числом программ
+     * - forDate : дата, на которую планируется транслировать композицию
+     * - eventList : сгруппированные списки событий в необходимом порядке
+     *      > под индексами программ без изменений лежат значения NULL
+     *
+     * @param params Входные POST параметры
+     * @returns { compose, programs } Измененная композиция и список программ
+     */
+    async updateOne(params)
+    {
+        const { user } = params;
+        this.checkRole(user.role);
+
+        const { id, forDate, programs, eventList, timingList } = params?.body;
+
+        if (!programs) {
+            throw new Error('Попытка сохранить пустую композицию.');
+        }
+
+        const compose = await Compose.findOne({
+            where: {
+                id: id,
+            },
+        });
+
+        if (!compose.isSpecial) {
+            if (programs.length !== 3) {
+                throw new Error('Для стандартной композиции определены не все программы.');
+            }
+        }
+
+        if (compose.isSpecial && programs.length !== timingList.length) {
+            throw new Error('Некорректный запрос: несовпадение числа таймингов и программ.');
+        }
+
+        await Compose.update({
+            date: forDate,
+        }, {
+            where: {
+                id: id,
+            },
+        });
+
+        await Program.update({
+            composeId: null,
+            timeToSwap: null,
+        }, {
+            where: {
+                composeId: id,
+            },
+        });
+
+        let timings = timingList;
+
+        if (!compose.isSpecial) {
+            timings = [ '08:40:00', '10:15:00', '12:00:00' ];
+        }
+
+        for (let i in programs) {
+            let result = await Program.update({
+                composeId: id,
+                timeToSwap: timings[i],
+            }, {
+                where: {
+                    id: programs[i].id,
+                    composeId: null,
+                },
+            });
+
+            if (!result) {
+                throw new Error('Некорректный запрос: передан ID несуществующей программы');
+            }
+
+            if (eventList[i] !== null) {
+                let data = {
+                    user: user,
+                    body: {
+                        programId: programs[i].id,
+                        events: eventList[i],
+                    },
+                }
+
+                await programService.updateOne(data);
+            }
+        }
+
+        return await this.getOne({
+            user: user,
+            body: {
+                id: id,
+            },
+        });
     }
 
     /**
@@ -319,7 +389,7 @@ class ComposeService
      */
     checkRole(role)
     {
-        if (![ 'admin', 'moder', 'editor' ].includes(role)) {
+        if (![ 'admin', 'moderator', 'editor' ].includes(role)) {
             throw new Error('Недостаточно прав доступа');
         }
     }

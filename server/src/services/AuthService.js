@@ -16,29 +16,30 @@ class AuthService
     /**
      * Основной метод авторизации
      *
-     * @param params Входные параметры запроса
+     * @param params Входные POST параметры
      * @return object Данные авторизованного аккаунта
      */
     async signIn(params)
     {
-        const { login, password } = params.body;
+        const { login, password } = params?.body;
 
-        const user = await User.findAll({
+        const user = await User.findOne({
             where: {
                 login: login,
             },
             include: {
+                as: 'role',
                 model: Role,
+                attributes: [ 'role' ],
             },
-            nested: true,
-            raw: true,
+            nest: true,
         });
 
-        if (user[0] === undefined) {
-            throw new Error('Missing login');
+        if (!user.id) {
+            throw new Error('Пользователь с данным логином не найден');
         }
 
-        const correctPassword = await argon2.verify(user[0].passHash, password);
+        const correctPassword = await argon2.verify(user.passHash, password);
 
         if (!correctPassword) {
             throw new Error('Incorrect password');
@@ -48,31 +49,26 @@ class AuthService
             where: {
                 addressedTo: null,
             },
-            nested: true,
-            raw: true,
         });
 
         const personalNotes = await Note.findAll({
             where: {
-                addressedTo: user[0].login,
+                addressedTo: user.login,
             },
-            nested: true,
-            raw: true,
         });
 
         const viewed = await User_Note.findAll({
             where: {
-                userId: user[0].id,
+                userId: user.id,
             },
-            raw: true,
         });
 
         const token = jwt.sign(
             {
-                userId: user[0].id,
+                userId: user.id,
                 login,
-                name: user[0].name,
-                role: user[0]['Role.role'],
+                name: user.name,
+                role: user['Role.role'],
             },
             process.env.TOKEN_KEY,
             {
@@ -80,16 +76,12 @@ class AuthService
             }
         );
 
-        const authUser = {
+        return {
             token: token,
             unread: actualNotes.length + personalNotes.length - viewed.length,
-            name: user[0].name,
-            role: user[0]['Role.role'],
-        }
-
-        console.log(authUser);
-
-        return authUser;
+            name: user.name,
+            role: user.role,
+        };
     }
 }
 
