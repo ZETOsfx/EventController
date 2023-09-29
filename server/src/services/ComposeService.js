@@ -1,5 +1,6 @@
 const { Op } = require("sequelize");
 const { Program, Compose, Event } = require('../../models');
+
 const programService = require('./ProgramService');
 
 /**
@@ -33,11 +34,11 @@ class ComposeService
                     include: {
                         as: 'events',
                         model: Event,
-                        attributes: [ 'id', 'name', 'src', 'type', 'time', 'order' ],
+                        attributes: ['id', 'name', 'src', 'type', 'time', 'order'],
                     },
-                    attributes: [ 'id', 'name', 'timeToSwap', 'isActive' ],
+                    attributes: ['id', 'name', 'timeToSwap', 'isActive'],
                 },
-                attributes: [ 'id', 'name', 'comment', 'date', 'isSpecial', 'authorName', 'screen', 'status', 'message' ],
+                attributes: ['id', 'name', 'comment', 'date', 'isSpecial', 'authorName', 'screen', 'status', 'message'],
                 order: [
                     [
                         { model: Program, as: 'programs' },
@@ -48,7 +49,7 @@ class ComposeService
                         { model: Event, as: 'events' },
                         'order', 'ASC'
                     ],
-                    [ 'createdAt', 'DESC' ],
+                    ['createdAt', 'DESC'],
                 ],
             }),
             otherComposes: await Compose.findAll({
@@ -64,11 +65,11 @@ class ComposeService
                     include: {
                         as: 'events',
                         model: Event,
-                        attributes: [ 'id', 'name', 'src', 'type', 'time', 'order' ],
+                        attributes: ['id', 'name', 'src', 'type', 'time', 'order'],
                     },
-                    attributes: [ 'id', 'name', 'timeToSwap', 'isActive' ],
+                    attributes: ['id', 'name', 'timeToSwap', 'isActive'],
                 },
-                attributes: [ 'id', 'name', 'comment', 'date', 'isSpecial', 'authorName', 'screen', 'status', 'message' ],
+                attributes: ['id', 'name', 'comment', 'date', 'isSpecial', 'authorName', 'screen', 'status', 'message'],
                 order: [
                     [
                         { model: Program, as: 'programs' },
@@ -79,7 +80,7 @@ class ComposeService
                         { model: Event, as: 'events' },
                         'order', 'ASC'
                     ],
-                    [ 'createdAt', 'DESC' ],
+                    ['createdAt', 'DESC'],
                 ],
             }),
         };
@@ -114,11 +115,11 @@ class ComposeService
                 include: {
                     as: 'events',
                     model: Event,
-                    attributes: [ 'id', 'name', 'src', 'type', 'time', 'order' ],
+                    attributes: ['id', 'name', 'src', 'type', 'time', 'order'],
                 },
-                attributes: [ 'id', 'name', 'timeToSwap', 'isActive' ],
+                attributes: ['id', 'name', 'timeToSwap', 'isActive'],
             },
-            attributes: [ 'id', 'name', 'comment', 'date', 'isSpecial', 'authorName', 'screen', 'status', 'message' ],
+            attributes: ['id', 'name', 'comment', 'date', 'isSpecial', 'authorName', 'screen', 'status', 'message'],
             order: [
                 [
                     { model: Program, as: 'programs' },
@@ -207,7 +208,7 @@ class ComposeService
         let timings = times;
 
         if (!isSpec) {
-            timings = [ '08:40:00', '10:15:00', '12:00:00' ];
+            timings = ['08:40:00', '10:15:00', '12:00:00'];
         }
 
         for (let index in programsId) {
@@ -343,7 +344,7 @@ class ComposeService
         let timings = timingList;
 
         if (!compose.isSpecial) {
-            timings = [ '08:40:00', '10:15:00', '12:00:00' ];
+            timings = ['08:40:00', '10:15:00', '12:00:00'];
         }
 
         for (let i in programs) {
@@ -389,7 +390,7 @@ class ComposeService
      */
     checkRole(role)
     {
-        if (![ 'admin', 'moderator', 'editor' ].includes(role)) {
+        if (!['admin', 'moderator', 'editor'].includes(role)) {
             throw new Error('Недостаточно прав доступа');
         }
     }

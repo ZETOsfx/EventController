@@ -25,7 +25,7 @@ app.use(morgan(':method :url :status :res[content-length] - :response-time ms'))
 app.use(express.urlencoded({ extended: false, limit: '25mb' }));   // Parsing requests
 
 const corsOptions = {
-    origin:'http://localhost:3000',
+    origin: 'http://localhost:3000',
     credentials: true,            // access-control-allow-credentials: true
     optionSuccessStatus: 200
 }
@@ -64,11 +64,13 @@ app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 const getRoutes = require('./src/router');
 getRoutes(app);
 
-const startCron = require('./crontab');
-startCron();
-
-db.sequelize.sync().then((req) => {
-    server.listen(PORT, (error) => {
+db.sequelize.sync().then((req) =>
+{
+    server.listen(PORT, (error) =>
+    {
         error ? console.log(error) : console.log(`listening port ${PORT}`);
     });
 });
+
+const startCron = require('./crontab');
+startCron();

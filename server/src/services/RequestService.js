@@ -1,5 +1,6 @@
-const { Op, Sequelize } = require("sequelize");
+const { Sequelize } = require("sequelize");
 const { Event, Program, Compose, Request, Note } = require('../../models');
+
 const composeService = require('./ComposeService');
 
 /**
@@ -32,13 +33,13 @@ class RequestService
                     include: {
                         as: 'events',
                         model: Event,
-                        attributes: [ 'id', 'name', 'src', 'type', 'time', 'order' ],
+                        attributes: ['id', 'name', 'src', 'type', 'time', 'order'],
                     },
-                    attributes: [ 'id', 'name', 'timeToSwap' ],
+                    attributes: ['id', 'name', 'timeToSwap'],
                 },
-                attributes: [ 'id', 'name', 'comment', 'date', 'isSpecial', 'authorName', 'screen', 'status', 'message' ],
+                attributes: ['id', 'name', 'comment', 'date', 'isSpecial', 'authorName', 'screen', 'status', 'message'],
             },
-            attributes: [ 'id', 'isAccepted', 'approved', 'changer', 'isActive', 'inProcessing' ],
+            attributes: ['id', 'isAccepted', 'approved', 'changer', 'isActive', 'inProcessing'],
             order: [
                 [
                     { model: Compose, as: 'compose' },
@@ -68,7 +69,7 @@ class RequestService
     {
         const { user } = params;
 
-        if (![ 'admin', 'moderator', 'editor' ].includes(user.role)) {
+        if (!['admin', 'moderator', 'editor'].includes(user.role)) {
             throw new Error('Недостаточно прав доступа');
         }
 
@@ -155,7 +156,7 @@ class RequestService
                 where: {
                     id: id,
                 },
-                attributes: [ 'composeId' ],
+                attributes: ['composeId'],
             })).composeId;
 
             await Request.destroy({
@@ -185,7 +186,7 @@ class RequestService
                     where: {
                         id: id,
                     },
-                    attributes: [ 'composeId' ],
+                    attributes: ['composeId'],
                 })).composeId;
 
                 await Request.update({
@@ -340,8 +341,9 @@ class RequestService
             },
         });
 
-        const between = (time, left, right) => {
-            return [ time, left, right ].sort()[1] === time;
+        const between = (time, left, right) =>
+        {
+            return [time, left, right].sort()[1] === time;
         }
 
         let date = new Date();
@@ -349,21 +351,21 @@ class RequestService
 
         if (!newRequest.compose.isSpecial) {
             const state = [
-                [ '00:00', '08:20', 'Обед' ],
-                [ '08:20', '08:40', 'Перерыв' ],
-                [ '08:40', '10:15', 'Пара' ],
-                [ '10:15', '10:25', 'Перерыв' ],
-                [ '10:25', '12:00', 'Пара' ],
-                [ '12:00', '12:50', 'Обед' ],
-                [ '12:50', '14:25', 'Пара' ],
-                [ '14:25', '14:35', 'Перерыв' ],
-                [ '14:35', '16:10', 'Пара' ],
-                [ '16:10', '16:20', 'Перерыв' ],
-                [ '16:20', '17:50', 'Пара' ],
-                [ '17:50', '23:59', 'Обед' ],
+                ['00:00', '08:20', 'Обед'],
+                ['08:20', '08:40', 'Перерыв'],
+                ['08:40', '10:15', 'Пара'],
+                ['10:15', '10:25', 'Перерыв'],
+                ['10:25', '12:00', 'Пара'],
+                ['12:00', '12:50', 'Обед'],
+                ['12:50', '14:25', 'Пара'],
+                ['14:25', '14:35', 'Перерыв'],
+                ['14:35', '16:10', 'Пара'],
+                ['16:10', '16:20', 'Перерыв'],
+                ['16:20', '17:50', 'Пара'],
+                ['17:50', '23:59', 'Обед'],
             ];
 
-            let origin = [ 'Пара', 'Перерыв', 'Обед' ];
+            let origin = ['Пара', 'Перерыв', 'Обед'];
             let currentState;
 
             for (let i in state) {
@@ -418,13 +420,13 @@ class RequestService
                     include: {
                         as: 'events',
                         model: Event,
-                        attributes: [ 'id', 'name', 'src', 'type', 'time', 'order' ],
+                        attributes: ['id', 'name', 'src', 'type', 'time', 'order'],
                     },
-                    attributes: [ 'id', 'name', 'timeToSwap' ],
+                    attributes: ['id', 'name', 'timeToSwap'],
                 },
-                attributes: [ 'id', 'name', 'comment', 'date', 'isSpecial', 'authorName', 'screen', 'status', 'message' ],
+                attributes: ['id', 'name', 'comment', 'date', 'isSpecial', 'authorName', 'screen', 'status', 'message'],
             },
-            attributes: [ 'id', 'isAccepted', 'approved', 'changer', 'isActive', 'inProcessing' ],
+            attributes: ['id', 'isAccepted', 'approved', 'changer', 'isActive', 'inProcessing'],
             order: [
                 [
                     { model: Compose, as: 'compose' },
@@ -495,7 +497,7 @@ class RequestService
      */
     checkRole(role)
     {
-        if (![ 'admin', 'moderator' ].includes(role)) {
+        if (!['admin', 'moderator'].includes(role)) {
             throw new Error('Недостаточно прав доступа');
         }
     }

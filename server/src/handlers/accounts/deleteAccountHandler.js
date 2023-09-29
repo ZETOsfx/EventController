@@ -1,6 +1,7 @@
 const userService = require('../../services/UserService');
 
-const handle = async (req, res) => {
+const handle = async (req, res) =>
+{
     try {
         res.status(200).json({
             status: 'success',

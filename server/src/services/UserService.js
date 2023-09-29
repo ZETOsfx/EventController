@@ -71,7 +71,8 @@ class UserService
             },
         });
 
-        users.forEach(user => {
+        users.forEach(user =>
+        {
             response.push({
                 id: user.id,
                 name: user.name,
@@ -171,7 +172,7 @@ class UserService
      */
     accessCheck(params)
     {
-        if (![ 'admin' ].includes(params.user.role)) {
+        if (!['admin'].includes(params.user.role)) {
             throw new Error('Нет прав доступа');
         }
     }
@@ -194,7 +195,7 @@ class UserService
                     },
                     {
                         name: name,
-                    }, ],
+                    },],
             },
         });
     }

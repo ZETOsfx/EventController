@@ -31,16 +31,16 @@ class ProgramService
             include: {
                 as: 'events',
                 model: Event,
-                attributes: [ 'id', 'name', 'src', 'type', 'time', 'order' ],
+                attributes: ['id', 'name', 'src', 'type', 'time', 'order'],
             },
             order: [
-                [ 'createdAt', 'DESC' ],
+                ['createdAt', 'DESC'],
                 [
                     { model: Event, as: 'events' },
                     'order', 'ASC'
                 ],
             ],
-            attributes: [ 'id', 'name' ],
+            attributes: ['id', 'name'],
         });
     }
 
@@ -65,7 +65,7 @@ class ProgramService
             include: {
                 as: 'events',
                 model: Event,
-                attributes: [ 'id', 'name', 'src', 'type', 'time', 'order' ],
+                attributes: ['id', 'name', 'src', 'type', 'time', 'order'],
             },
             order: [
                 [
@@ -73,7 +73,7 @@ class ProgramService
                     'order', 'ASC'
                 ],
             ],
-            attributes: [ 'id', 'name' ],
+            attributes: ['id', 'name'],
         });
     }
 
@@ -309,13 +309,13 @@ class ProgramService
                     include: {
                         as: 'events',
                         model: Event,
-                        attributes: [ 'src', 'type' ],
+                        attributes: ['src', 'type'],
                     },
-                    attributes: [ 'id', 'name' ],
+                    attributes: ['id', 'name'],
                 },
-                attributes: [ 'id', 'name' ],
+                attributes: ['id', 'name'],
             },
-            attributes: [ 'id' ],
+            attributes: ['id'],
             order: [
                 [
                     { model: Compose, as: 'compose' },
@@ -355,7 +355,7 @@ class ProgramService
      */
     checkRole(role)
     {
-        if (![ 'admin', 'moderator', 'editor' ].includes(role)) {
+        if (!['admin', 'moderator', 'editor'].includes(role)) {
             throw new Error('Недостаточно прав доступа');
         }
     }

@@ -30,7 +30,7 @@ class AuthService
             include: {
                 as: 'role',
                 model: Role,
-                attributes: [ 'role' ],
+                attributes: ['role'],
             },
             nest: true,
         });

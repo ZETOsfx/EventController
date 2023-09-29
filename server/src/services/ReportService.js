@@ -1,7 +1,6 @@
 require('dotenv').config();
 
-const { Op } = require("sequelize");
-const { Note, User_Note } = require('../../models');
+const { Note } = require('../../models');
 
 const nodemailer = require('nodemailer');
 const Mailgen = require('mailgen');
@@ -51,7 +50,7 @@ class ReportService
             body: {
                 title: 'Пользователь ' + user.name + ' уведомляет об ошибке.',
                 intro: short,
-                outro: [ description, 'Время ошибки: ' + timecode, 'Браузер пользователя: ' + browserData, 'ОС пользователя: ' + osData ],
+                outro: [description, 'Время ошибки: ' + timecode, 'Браузер пользователя: ' + browserData, 'ОС пользователя: ' + osData],
                 signature: 'C уважением'
             }
         });

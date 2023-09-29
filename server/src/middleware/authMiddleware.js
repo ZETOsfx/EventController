@@ -10,7 +10,8 @@ const jwt = require('jsonwebtoken');
  * @param next
  * @return { * } Переход к обработчику запроса или перенаправление на авторизацию.
  */
-const verifyToken = (req, res, next) => {
+const verifyToken = (req, res, next) =>
+{
     const token = req.headers["x-access-token"];
 
     if (!token) {

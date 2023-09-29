@@ -1,7 +1,9 @@
 const cron = require('node-cron');
 
-startCron = () => {
-    cron.schedule('* * * * * *', function () {
+startCron = () =>
+{
+    cron.schedule('* * * * * *', function ()
+    {
         console.log('Crontab working');
     }, {
         name: 'test',
@@ -9,8 +11,9 @@ startCron = () => {
         timezone: "Europe/Moscow",
     });
 
-    cron.getTasks().forEach((task) => {
-         console.log(task.options.name);
+    cron.getTasks().forEach((task) =>
+    {
+        console.log("Node-Cron working!");
     });
 }
 

@@ -1,7 +1,7 @@
 require('dotenv').config();
 
-const { Op } = require("sequelize");
 const { File } = require('../../models');
+
 const fs = require('fs');
 const path = require('path');
 const exec = require('child_process').exec;
@@ -24,7 +24,8 @@ class FileService
     {
         let fileStorageData = [];
 
-        const child = exec('df -h ' + process.env.DISK_FREE + " | awk '{print $2, $3, $5}' | tail -n +2", (error, stdout, stderr) => {
+        const child = exec('df -h ' + process.env.DISK_FREE + " | awk '{print $2, $3, $5}' | tail -n +2", (error, stdout, stderr) =>
+        {
             fileStorageData = stdout.toString().split(' ');
             fileStorageData[2] = fileStorageData[2].split('\n')[0];
 
@@ -55,10 +56,10 @@ class FileService
             let changedName = files[i].path.split('/').slice(-1);
 
             await File.create({
-                name:   nameExt[0],
+                name: nameExt[0],
                 format: nameExt[1],
-                src:    process.env.UPLOAD_PATH_IMAGINE + '/' + changedName,
-                type:   files[i].fieldname,
+                src: process.env.UPLOAD_PATH_IMAGINE + '/' + changedName,
+                type: files[i].fieldname,
                 weight: Math.round(files[i].size / (1024 * 1024) * 100) / 100 + ' МБ',
                 authorName: user.name,
                 expires: "9999-01-01",
@@ -91,7 +92,7 @@ class FileService
             throw new Error('Файл не найден');
         }
 
-        if (![ 'admin' ].includes(user.role) && user.name !== file.authorName) {
+        if (!['admin'].includes(user.role) && user.name !== file.authorName) {
             throw new Error('Удалять чужие файлы может только администратор');
         }
 
@@ -103,8 +104,6 @@ class FileService
             },
         })[0];
     }
-
-
 }
 
 module.exports = new FileService();

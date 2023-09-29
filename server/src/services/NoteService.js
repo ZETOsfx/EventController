@@ -31,7 +31,7 @@ class NoteService
                 ],
             },
             order: [
-                [ 'createdAt', 'DESC' ],
+                ['createdAt', 'DESC'],
             ],
         });
 
@@ -66,7 +66,7 @@ class NoteService
                 addressedTo: null,
             },
             order: [
-                [ 'createdAt', 'DESC' ],
+                ['createdAt', 'DESC'],
             ],
         });
     }
@@ -143,7 +143,7 @@ class NoteService
      */
     checkRole(role)
     {
-        if (![ 'admin', 'moderator', 'manager' ].includes(role)) {
+        if (!['admin', 'moderator', 'manager'].includes(role)) {
             throw new Error('Недостаточно прав доступа');
         }
     }
