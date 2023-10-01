@@ -1,11 +1,11 @@
-const programService = require('../../../services/ProgramService');
+const composeService = require('../../../services/ComposeService');
 
 const handle = async (req, res) =>
 {
     try {
         res.status(200).json({
             status: 'success',
-            data: await programService.deleteOne(req),
+            data: await composeService.deleteOne(req),
         });
     } catch (error) {
         res.status(400).json({

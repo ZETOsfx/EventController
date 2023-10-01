@@ -1,11 +1,11 @@
-const requestService = require('../../../services/RequestService');
+const fileService = require('../../services/FileService');
 
 const handle = async (req, res) =>
 {
     try {
         res.status(200).json({
             status: 'success',
-            data: await requestService.addOne(req),
+            data: await fileService.deleteOne(req),
         });
     } catch (error) {
         res.status(400).json({

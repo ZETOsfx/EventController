@@ -1,11 +1,15 @@
 const programService = require('../../services/ProgramService');
+const composeService = require('../../../services/ComposeService');
 
 const handle = async (req, res) =>
 {
     try {
         res.status(200).json({
             status: 'success',
-            data: await programService.getWorkingData(req),
+            data: {
+                programs: await programService.getAll(req),
+                composes: await composeService.getAll(req),
+            },
         });
     } catch (error) {
         res.status(400).json({

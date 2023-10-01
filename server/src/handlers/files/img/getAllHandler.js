@@ -1,11 +1,11 @@
-const requestService = require('../../../services/RequestService');
+const fileService = require('../../../services/FileImageService');
 
 const handle = async (req, res) =>
 {
     try {
         res.status(200).json({
             status: 'success',
-            data: await requestService.addOne(req),
+            data: await fileService.getAll(),
         });
     } catch (error) {
         res.status(400).json({

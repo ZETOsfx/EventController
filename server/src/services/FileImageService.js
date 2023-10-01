@@ -12,7 +12,7 @@ const exec = require('child_process').exec;
  *
  * @package src/services
  */
-class FileService
+class FileImageService
 {
     /**
      * Получить список всех файлов
@@ -22,17 +22,10 @@ class FileService
      */
     async getAll()
     {
-        let fileStorageData = [];
-
-        const child = exec('df -h ' + process.env.DISK_FREE + " | awk '{print $2, $3, $5}' | tail -n +2", (error, stdout, stderr) =>
-        {
-            fileStorageData = stdout.toString().split(' ');
-            fileStorageData[2] = fileStorageData[2].split('\n')[0];
-
-            return {
-                files: File.findAll(),
-                fileStorageData,
-            };
+        return File.findAll({
+            where: {
+                type: ['image', 'img'],
+            },
         });
     }
 
@@ -42,7 +35,7 @@ class FileService
      * @param params Входные POST параметры
      * @return Array<Promise<File>> Загруженное (-ые) изображение (-я)
      */
-    async addImages(params)
+    async addList(params)
     {
         const { user } = params;
         const files = params?.files;
@@ -70,6 +63,38 @@ class FileService
         return this.getAll();
     }
 
+    /**
+     * Внести изменения в параметры хранения файла
+     * 
+     * @param params Входные POST параметры
+     * @return number Результат операции 
+     */
+    async updateOne(params)
+    {
+        const { user } = params;
+        const { id, expires, isUnlimited } = params?.body;
+
+        const file = await File.findOne({
+            where: {
+                id: id,
+            },
+        });
+
+        if (!file.id) {
+            throw new Error('Файл не найден');
+        } else if (file.authorName !== user.name && user.role !== 'admin') {
+            throw new Error('Менять чужие файлы может только администратор');
+        }
+
+        return await File.update({
+            isUnlimited: isUnlimited,
+            expires: (isUnlimited) ? "9999-01-01" : expires,
+        }, {
+            where: {
+                id: id,
+            },
+        })[0];
+    }
 
     /**
      * Удалить изображение с сервера
@@ -77,7 +102,7 @@ class FileService
      * @param params Входные DELETE параметры
      * @return number Статус операции
      */
-    async deleteOneImage(params)
+    async deleteOne(params)
     {
         const { user } = params;
         const { id } = params?.body;
@@ -106,4 +131,4 @@ class FileService
     }
 }
 
-module.exports = new FileService();
+module.exports = new FileImageService();
