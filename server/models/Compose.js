@@ -1,6 +1,6 @@
 'use strict';
 
-const { Model } = require('sequelize');
+const { Model, Sequelize } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) =>
 {
@@ -13,7 +13,6 @@ module.exports = (sequelize, DataTypes) =>
          */
         static associate(models)
         {
-            // define association here
             Compose.hasMany(models.Program, {
                 as: 'programs',
                 foreignKey: 'composeId',
@@ -25,8 +24,9 @@ module.exports = (sequelize, DataTypes) =>
             });
 
             Compose.belongsTo(models.User, {
-                foreignKey: 'authorName',
-                targetKey: 'name',
+                foreignKey: 'authorId',
+                targetKey: 'id',
+                as: 'author',
             });
         }
     }
@@ -34,6 +34,7 @@ module.exports = (sequelize, DataTypes) =>
     Compose.init({
         id: {
             type: DataTypes.UUID,
+            defaultValue: Sequelize.UUIDV4,
             primaryKey: true,
             allowNull: false,
         },
@@ -48,12 +49,12 @@ module.exports = (sequelize, DataTypes) =>
             field: 'is_special',
             allowNull: false,
         },
-        authorName: {
-            field: 'author',
+        authorId: {
+            field: 'author_id',
             type: DataTypes.STRING(16),
             references: {
                 model: 'User',
-                key: 'name',
+                key: 'id',
             },
             allowNull: false,
         },
@@ -63,6 +64,10 @@ module.exports = (sequelize, DataTypes) =>
             allowNull: false,
         },
         message: DataTypes.TEXT,
+        createdAt: {
+            type: Sequelize.DATE,
+            field: 'created_at',
+        },
 
     }, {
         sequelize,

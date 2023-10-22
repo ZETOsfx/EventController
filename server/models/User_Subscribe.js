@@ -1,7 +1,6 @@
 'use strict';
-const {
-    Model
-} = require('sequelize');
+const { Model, Sequelize } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) =>
 {
     class User_Subscribe extends Model
@@ -20,6 +19,7 @@ module.exports = (sequelize, DataTypes) =>
     User_Subscribe.init({
         id: {
             type: DataTypes.UUID,
+            defaultValue: Sequelize.UUIDV4,
             primaryKey: true,
             allowNull: false,
         },

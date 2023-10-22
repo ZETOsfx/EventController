@@ -1,36 +1,36 @@
 import { createRouter, createWebHistory } from "vue-router";
-import Editor   from './views/Editor.vue';
-import Moders   from './views/Moder.vue';
-import Manager  from './views/Manager.vue';
-import AdsCast  from './views/AdsCast.vue';
-import Admins   from './views/Admin.vue';
-import Uploads  from './views/FileUpload.vue';
-import Index    from './views/MainPage.vue';
-import Guide    from './views/Guide.vue';
-import Login    from './views/Auth.vue';
+import Editor from './views/Editor.vue';
+import Moders from './views/Moder.vue';
+import Manager from './views/Manager.vue';
+import AdsCast from './views/AdsCast.vue';
+import Admins from './views/Admin.vue';
+import Uploads from './views/FileUpload.vue';
+import Index from './views/MainPage.vue';
+import Guide from './views/Guide.vue';
+import Login from './views/Auth.vue';
 import NotFound from './views/Error.vue';
-import Cast     from './views/Cast.vue';
-import BugRep   from './views/BugReport.vue';
-import Remote   from './views/Remote.vue';
+import Cast from './views/Cast.vue';
+import BugRep from './views/BugReport.vue';
+import Remote from './views/Remote.vue';
 
 export const router = createRouter({
     history: createWebHistory(),
     routes: [
-        {   path: '/', redirect: '/index' },
+        { path: '/', redirect: '/index' },
         {
             path: '/index',
             name: 'MainPage',
-            component: Index
+            component: Index,
         },
         {
             path: '/login',
             name: 'SignIn',
-            component: Login
+            component: Login,
         },
         {
             path: '/guide',
             name: 'Guide',
-            component: Guide
+            component: Guide,
         },
         {
             path: '/event',
@@ -38,8 +38,8 @@ export const router = createRouter({
             component: Editor,
             meta: {
                 needsAuth: true,
-                roles: ['editor', 'moder', 'admin']
-            }
+                roles: ['editor', 'moder', 'admin'],
+            },
         },
         {
             path: '/account',
@@ -47,8 +47,8 @@ export const router = createRouter({
             component: Admins,
             meta: {
                 needsAuth: true,
-                roles: ['admin']
-            }
+                roles: ['admin'],
+            },
         },
         {
             path: '/moder',
@@ -56,8 +56,8 @@ export const router = createRouter({
             component: Moders,
             meta: {
                 needsAuth: true,
-                roles: ['moder', 'admin']
-            }
+                roles: ['moder', 'admin'],
+            },
         },
         {
             path: '/note',
@@ -67,12 +67,12 @@ export const router = createRouter({
         {
             path: '/adscast',
             name: 'Adscast',
-            component: AdsCast
+            component: AdsCast,
         },
         {
             path: '/remote',
             name: 'Remote',
-            component: Remote
+            component: Remote,
         },
         {
             path: '/upload',
@@ -80,8 +80,8 @@ export const router = createRouter({
             component: Uploads,
             meta: {
                 needsAuth: true,
-                roles: ['editor', 'moder', 'admin', 'adsender']
-            }
+                roles: ['editor', 'moder', 'admin', 'adsender'],
+            },
         },
         {
             path: '/bugreport',
@@ -89,33 +89,35 @@ export const router = createRouter({
             component: BugRep,
             meta: {
                 needsAuth: true,
-                roles: ['editor', 'moder', 'admin', 'adsender']
+                roles: ['editor', 'moder', 'admin', 'adsender'],
             }
         },
         {
             path: '/cast',
             name: 'Broadcast',
-            component: Cast
+            component: Cast,
         },
         {
             path: '/:pathMatch(.*)*',
             name: '404',
-            component: NotFound
+            component: NotFound,
         }
     ]
 });
 
-    // Route protect
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, from, next) =>
+{
     if (to.meta.needsAuth) {
         let user = JSON.parse(localStorage.getItem('user'));
-        if (user)
-            if (to.meta.roles.includes(user.role)) 
+        if (user) {
+            if (to.meta.roles.includes(user.role.role)) {
                 return next();
-            else 
+            } else {
                 return next('/404');
-        else
+            }
+        } else {
             return next('/login');
+        }
     }
     return next();
 }); 

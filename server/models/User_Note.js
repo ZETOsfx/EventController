@@ -1,6 +1,6 @@
 'use strict';
 
-const { Model } = require('sequelize');
+const { Model, Sequelize } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) =>
 {
@@ -20,6 +20,7 @@ module.exports = (sequelize, DataTypes) =>
     User_Note.init({
         id: {
             type: DataTypes.UUID,
+            defaultValue: Sequelize.UUIDV4,
             primaryKey: true,
             allowNull: false,
         },

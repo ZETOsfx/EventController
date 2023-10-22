@@ -1,6 +1,6 @@
 'use strict';
 
-const { Model } = require('sequelize');
+const { Model, Sequelize } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) =>
 {
@@ -13,7 +13,6 @@ module.exports = (sequelize, DataTypes) =>
          */
         static associate(models)
         {
-            // define association here
             Program.hasMany(models.Event, {
                 foreignKey: 'programId',
                 as: 'events',
@@ -25,8 +24,8 @@ module.exports = (sequelize, DataTypes) =>
             });
 
             Program.belongsTo(models.User, {
-                foreignKey: 'authorName',
-                targetKey: 'name',
+                foreignKey: 'authorId',
+                targetKey: 'id',
                 as: 'author',
             });
         }
@@ -35,16 +34,17 @@ module.exports = (sequelize, DataTypes) =>
     Program.init({
         id: {
             type: DataTypes.UUID,
+            defaultValue: Sequelize.UUIDV4,
             primaryKey: true,
             allowNull: false,
         },
         name: DataTypes.STRING(30),
-        authorName: {
-            field: 'author',
+        authorId: {
+            field: 'author_id',
             type: DataTypes.STRING(16),
             references: {
                 model: 'User',
-                key: 'name',
+                key: 'id',
             },
             allowNull: false,
         },
@@ -68,7 +68,10 @@ module.exports = (sequelize, DataTypes) =>
             type: DataTypes.TIME,
             allowNull: true,
         },
-
+        createdAt: {
+            type: Sequelize.DATE,
+            field: 'created_at',
+        },
     }, {
         sequelize,
         modelName: 'Program',

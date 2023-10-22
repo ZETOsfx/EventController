@@ -1,6 +1,6 @@
 'use strict';
 
-const { Model } = require('sequelize');
+const { Model, Sequelize } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) =>
 {
@@ -11,9 +11,8 @@ module.exports = (sequelize, DataTypes) =>
          * This method is not a part of Sequelize lifecycle.
          * The `models/index` file will call this method automatically.
          */
-        static associate({ Role, Subscribe, Note })
+        static associate({ Role, Subscribe, Note, Compose, Program, File })
         {
-            // define association here
             User.belongsTo(Role, {
                 foreignKey: 'roleId',
                 targetKey: 'id',
@@ -29,12 +28,37 @@ module.exports = (sequelize, DataTypes) =>
                 through: 'User_Note',
                 as: 'reads',
             });
+
+            User.hasMany(Note, {
+                sourceKey: 'id',
+                foreignKey: 'authorId',
+                as: 'notes',
+            });
+
+            User.hasMany(Compose, {
+                sourceKey: 'id',
+                foreignKey: 'authorId',
+                as: 'composes',
+            });
+
+            User.hasMany(Program, {
+                sourceKey: 'id',
+                foreignKey: 'authorId',
+                as: 'programs',
+            });
+
+            User.hasMany(File, {
+                sourceKey: 'id',
+                foreignKey: 'authorId',
+                as: 'files',
+            });
         }
     }
 
     User.init({
         id: {
             type: DataTypes.UUID,
+            defaultValue: Sequelize.UUIDV4,
             primaryKey: true,
             allowNull: false,
         },

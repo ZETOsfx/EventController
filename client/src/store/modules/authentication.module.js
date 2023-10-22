@@ -10,40 +10,48 @@ export const authentication = {
     namespaced: true,
     state: initialState,
     actions: {
-        login({ dispatch, commit }, { username, password }) {
+        login({ dispatch, commit }, { username, password })
+        {
             commit('loginRequest', { username });
-                
+
             userService.login(username, password)
                 .then(
-                    user => {
+                    user =>
+                    {
                         commit('loginSuccess', user);
                         router.push('/');
                     },
-                    error => {
+                    error =>
+                    {
                         commit('loginFailure', error);
                         dispatch('alert/error', error, { root: true });
                     }
                 );
         },
-        logout({ commit }) {
+        logout({ commit })
+        {
             userService.logout();
             commit('logout');
         }
     },
     mutations: {
-        loginRequest(state, user) {
+        loginRequest(state, user)
+        {
             state.status = { loggingIn: true };
             state.user = user;
         },
-        loginSuccess(state, user) {
+        loginSuccess(state, user)
+        {
             state.status = { loggedIn: true };
             state.user = user;
         },
-        loginFailure(state) {
+        loginFailure(state)
+        {
             state.status = {};
             state.user = null;
         },
-        logout(state) {
+        logout(state)
+        {
             state.status = {};
             state.user = null;
         }

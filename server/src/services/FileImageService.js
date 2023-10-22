@@ -1,10 +1,9 @@
 require('dotenv').config();
 
-const { File } = require('../../models');
+const { File, User } = require('../../models');
 
 const fs = require('fs');
 const path = require('path');
-const exec = require('child_process').exec;
 
 /**
  * Class FileService
@@ -23,9 +22,16 @@ class FileImageService
     async getAll()
     {
         return File.findAll({
+            nest: true,
             where: {
                 type: ['image', 'img'],
             },
+            include: {
+                as: 'author',
+                model: User,
+                attributes: ['name'],
+            },
+            attributes: ['id', 'name', 'src', 'type', 'weight', 'expires', 'isUnlimited', 'format'],
         });
     }
 
@@ -93,7 +99,7 @@ class FileImageService
             where: {
                 id: id,
             },
-        })[0];
+        });
     }
 
     /**
@@ -127,7 +133,7 @@ class FileImageService
             where: {
                 id: file.id,
             },
-        })[0];
+        });
     }
 }
 

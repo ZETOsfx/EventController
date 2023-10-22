@@ -1,29 +1,33 @@
 
 <template>
     <div class="intro">
-        <!-- Группировка toasts --> 
-        <toast :time="currentTime" :successCb="successMessage" :errorCb="errorMessage" :infoCb="infoMessage"></toast>
-
         <!-- Full Screen Modal -->
         <div v-if="this.files.length > 0" class="modal fade" id="fullScreenModal" tabindex="-1">
             <div class="modal-dialog modal-fullscreen">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h1 class="modal-title fs-5" id="exampleModalLabel">{{ this.forModal.name }}.{{ this.forModal.format }} ({{ this.forModal.weight }})</h1>
-                        <button type="button" class="btn btn-outline-secondary btn-sm col-auto ms-1" data-bs-dismiss="modal">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
-                                <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"></path>
+                        <h1 class="modal-title fs-5" id="exampleModalLabel">{{ this.forModal.name }}.{{ this.forModal.format
+                        }} ({{ this.forModal.weight }})</h1>
+                        <button type="button" class="btn btn-outline-secondary btn-sm col-auto ms-1"
+                            data-bs-dismiss="modal">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                class="bi bi-x-lg" viewBox="0 0 16 16">
+                                <path
+                                    d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z">
+                                </path>
                             </svg>
                         </button>
                     </div>
                     <div class="modal-body">
-                        <img v-if="this.forModal.type=== 'img' || this.forModal.type=== 'image'" :src="this.forModal.src" style="object-fit: contain; width: 100%; height: 100%;" alt="">
+                        <img v-if="this.forModal.type === 'img' || this.forModal.type === 'image'" :src="this.forModal.src"
+                            style="object-fit: contain; width: 100%; height: 100%;" alt="">
                     </div>
                     <div class="modal-footer">
                         <div class="row justify-content-between">
                             <div class="col-auto"> Загрузил: {{ this.forModal.author }} </div>
-                            <div v-if="!this.forModal.unlim" class="col-auto"> Актуально до: {{ this.forModal.actual }} </div>
-						  	<div v-if="this.forModal.unlim" class="col-auto"> Бессрочно </div>
+                            <div v-if="!this.forModal.unlim" class="col-auto"> Актуально до: {{ this.forModal.actual }}
+                            </div>
+                            <div v-if="this.forModal.unlim" class="col-auto"> Бессрочно </div>
                         </div>
                     </div>
                 </div>
@@ -31,20 +35,21 @@
         </div>
 
         <!-- Modal for Delete -->
-        <div class="modal fade" id="ModalDeleteFile" tabindex="-1" aria-hidden="true"  >
+        <div class="modal fade" id="ModalDeleteFile" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
-                <div class="modal-header">
-                    <h1 class="modal-title fs-5">Подтверждение удаления</h1>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    Вы собираетесь удалить файл "{{ this.forModal.name }}". <br> Вы уверены?
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                    <button @click=" deleteItem(this.forModal.index)" class="btn btn-danger" data-bs-dismiss="modal">Удалить</button>
-                </div>
+                    <div class="modal-header">
+                        <h1 class="modal-title fs-5">Подтверждение удаления</h1>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        Вы собираетесь удалить файл "{{ this.forModal.name }}". <br> Вы уверены?
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button @click=" deleteItem(this.forModal.index)" class="btn btn-danger"
+                            data-bs-dismiss="modal">Удалить</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -53,31 +58,42 @@
             <h6 class="text mt-4"> Загрузка файлов </h6>
             <!-- ADD FORM -->
             <div class="content">
-                <div class="mb-3">      
-                    <form action="/upload/img" method="POST" enctype="multipart/form-data" @submit="handleFormSubmit($event)"> 
+                <div class="mb-3">
+                    <form action="/files/img/add" method="POST" enctype="multipart/form-data"
+                        @submit="handleFormSubmit($event)">
                         <div class="row ms-0 me-0 mt-0 gx-2 mb-1">
                             <div class="col-12 mb-2">
-                                <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" style="position: relative;">
-                                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%)"> {{ storagePercent }} <small class="text-body-secondary ms-1">({{ storageUsed }} / {{ storageSize }})</small></div>
+                                <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+                                    style="position: relative;">
+                                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%)">
+                                        {{ storagePercent }} <small class="text-body-secondary ms-1">({{ storageUsed }} / {{
+                                            storageSize }})</small></div>
                                     <div id="progressBarStorage" class="progress-bar bg-success"></div>
-                                </div>   
+                                </div>
                             </div>
                             <div class="col-12 col-sm-12 col-md-8 col-lg-9 col-xl-10 mb-2">
-                                <input @change="handleUploads" name="image" class="form-control" type="file" id="formFile" accept="image/*" multiple ref="inputFile">
-                            </div> 
+                                <input @change="handleUploads" name="image" class="form-control" type="file" id="formFile"
+                                    accept="image/*" multiple ref="inputFile">
+                            </div>
                             <div class="col-12 col-sm-12 col-md-4 col-lg-3 col-xl-2">
                                 <button @click="uploadFiles" type="submit" class="btn btn-success w-100">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-upload" viewBox="0 0 16 16">
-                                        <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"></path>
-                                        <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"></path>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                        class="bi bi-upload" viewBox="0 0 16 16">
+                                        <path
+                                            d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z">
+                                        </path>
+                                        <path
+                                            d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z">
+                                        </path>
                                     </svg>
                                     Загрузить
                                 </button>
                             </div>
                         </div>
                     </form>
-                </div> 
-                <div v-if="this.sendFiles.length > 0" class="row row-cols-1 row-cols-sm-2 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 row-cols-xxl-5 g-2">
+                </div>
+                <div v-if="this.sendFiles.length > 0"
+                    class="row row-cols-1 row-cols-sm-2 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 row-cols-xxl-5 g-2">
                     <div v-for="(file, index) in sendFiles" class="col">
                         <div class="card h-100">
                             <!-- <small class="card-header">
@@ -94,11 +110,15 @@
                                     </button>
                                 </div>
                             </small> -->
-                            <img v-if="file.type.includes('image')" :src="'data:image/' + file.type + ';base64,' + this.fileURL[index]" style="object-fit: cover; width: 100%; height: 100%; max-height: 140px;" alt="">
-                            <img v-if="file.type.includes('video')" :src="this.fileURL[index]" style="object-fit: cover; width: 100%; height: 100%; max-height: 140px;" alt="">
+                            <img v-if="file.type.includes('image')"
+                                :src="'data:image/' + file.type + ';base64,' + this.fileURL[index]"
+                                style="object-fit: cover; width: 100%; height: 100%; max-height: 140px;" alt="">
+                            <img v-if="file.type.includes('video')" :src="this.fileURL[index]"
+                                style="object-fit: cover; width: 100%; height: 100%; max-height: 140px;" alt="">
                             <div class="card-body">
-                                <h6 class="card-title">{{ file.name }} 
-                                    <small class="text-body-secondary ms-1"> {{ Math.round(file.size / (1024 * 1024) * 100)/100 }} МБ </small>
+                                <h6 class="card-title">{{ file.name }}
+                                    <small class="text-body-secondary ms-1"> {{ Math.round(file.size / (1024 * 1024) *
+                                        100) / 100 }} МБ </small>
                                 </h6>
                                 <small class="card-text">{{ session.public_name }}</small>
                             </div>
@@ -127,7 +147,8 @@
                     </div>
                 </div>
                 <div v-if="showProgressBar" class="progress mt-2" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-                    <div id="progressLoadForm" class="progress-bar progress-bar-striped progress-bar-animated bg-success">{{ progressLoaded }}%</div>
+                    <div id="progressLoadForm" class="progress-bar progress-bar-striped progress-bar-animated bg-success">{{
+                        progressLoaded }}%</div>
                 </div>
             </div>
 
@@ -139,28 +160,46 @@
                         <div class="card h-100">
                             <small class="card-header">
                                 <div class="row justify-content-end">
-                                    <button @click="triggerModal('read', index, 'files')" type="button" class="btn btn-outline-secondary btn-sm col-auto ms-1" data-bs-toggle="modal" data-bs-target="#fullScreenModal">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-fullscreen" viewBox="0 0 16 16">
-                                            <path d="M1.5 1a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 0h4a.5.5 0 0 1 0 1h-4zM10 .5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 16 1.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5zM.5 10a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5zm15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5z"></path>
+                                    <button @click="triggerModal('read', index, 'files')" type="button"
+                                        class="btn btn-outline-secondary btn-sm col-auto ms-1" data-bs-toggle="modal"
+                                        data-bs-target="#fullScreenModal">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                            class="bi bi-fullscreen" viewBox="0 0 16 16">
+                                            <path
+                                                d="M1.5 1a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 0h4a.5.5 0 0 1 0 1h-4zM10 .5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 16 1.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5zM.5 10a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5zm15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5z">
+                                            </path>
                                         </svg>
                                     </button>
-                                    <a type="button" :href="file.src" @click.prevent="downloadItem(file)" class="btn btn-outline-success btn-sm col-auto ms-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-download" viewBox="0 0 16 16">
-                                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"></path>
-                                            <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"></path>
+                                    <a type="button" :href="file.src" @click.prevent="downloadItem(file)"
+                                        class="btn btn-outline-success btn-sm col-auto ms-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                            class="bi bi-download" viewBox="0 0 16 16">
+                                            <path
+                                                d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z">
+                                            </path>
+                                            <path
+                                                d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z">
+                                            </path>
                                         </svg>
                                     </a>
                                     <button type="button" class="btn btn-outline-danger btn-sm col-auto ms-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" @click="triggerModal('delete', index, 'files')" width="16" height="16" fill="currentColor" class="bi bi-trash3" viewBox="0 0 16 16" data-bs-toggle="modal" data-bs-target="#ModalDeleteFile">
-                                            <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5ZM11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1h-.995a.59.59 0 0 0-.01 0H11Zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5h9.916Zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47ZM8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z"></path>
+                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                            @click="triggerModal('delete', index, 'files')" width="16" height="16"
+                                            fill="currentColor" class="bi bi-trash3" viewBox="0 0 16 16"
+                                            data-bs-toggle="modal" data-bs-target="#ModalDeleteFile">
+                                            <path
+                                                d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5ZM11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1h-.995a.59.59 0 0 0-.01 0H11Zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5h9.916Zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47ZM8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z">
+                                            </path>
                                         </svg>
                                     </button>
                                 </div>
                             </small>
-                            <img v-if="file.type === 'image'" :src="file.src" style="object-fit: cover; width: 100%; height: 100%; max-height: 140px;" alt="">
-                            <video v-if="file.type === 'video'" :src="file.src" style="object-fit: cover; width: 100%; height: 100%; max-height: 140px;"></video>
+                            <img v-if="file.type === 'image'" :src="file.src"
+                                style="object-fit: cover; width: 100%; height: 100%; max-height: 140px;" alt="">
+                            <video v-if="file.type === 'video'" :src="file.src"
+                                style="object-fit: cover; width: 100%; height: 100%; max-height: 140px;"></video>
                             <div class="card-body">
-                                <h6 class="card-title">{{ file.name }}.{{ file.format }} 
+                                <h6 class="card-title">{{ file.name }}.{{ file.format }}
                                     <small class="text-body-secondary ms-1"> {{ file.weight }} </small>
                                 </h6>
                                 <small class="text-body-secondary">
@@ -170,35 +209,50 @@
                             <div class="card-footer">
                                 <div class="row justify-content-between align-items-center">
                                     <div v-if="!file.edit" class="col-auto">
-                                        <small v-if="!file.unlim" class="text-body-secondary"> До: {{ file.actual }} </small>
+                                        <small v-if="!file.unlim" class="text-body-secondary"> До: {{ file.actual }}
+                                        </small>
                                         <small v-if="file.unlim" class="text-body-secondary"> Бессрочно </small>
                                     </div>
 
                                     <div v-if="file.edit" class="col-12 mb-2">
-                                        <input v-if="!file.unlim" id="Date" v-model="file.actual" class="form-control" type="date"/>
+                                        <input v-if="!file.unlim" id="Date" v-model="file.actual" class="form-control"
+                                            type="date" />
                                     </div>
                                     <div v-if="file.edit" class="col-6">
                                         <div class="row m-0 p-0">
-                                            <input type="checkbox" v-model="file.unlim" class="btn-check col" id="btn-check-outlined" autocomplete="off">
+                                            <input type="checkbox" v-model="file.unlim" class="btn-check col"
+                                                id="btn-check-outlined" autocomplete="off">
                                             <label class="btn btn-outline-info" for="btn-check-outlined">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clock" viewBox="0 0 16 16">
-                                                    <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"></path>
-                                                    <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"></path>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                    fill="currentColor" class="bi bi-clock" viewBox="0 0 16 16">
+                                                    <path
+                                                        d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z">
+                                                    </path>
+                                                    <path
+                                                        d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z">
+                                                    </path>
                                                 </svg>
                                             </label> <br>
                                         </div>
                                     </div>
                                     <div v-if="file.edit" class="col-6">
                                         <button type="button" @click="file.edit = false" class="btn btn-success w-100">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-lg" viewBox="0 0 16 16">
-                                                <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425a.247.247 0 0 1 .02-.022Z"></path>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                fill="currentColor" class="bi bi-check-lg" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425a.247.247 0 0 1 .02-.022Z">
+                                                </path>
                                             </svg>
                                         </button>
                                     </div>
 
-                                    <button v-if="!file.edit" @click="file.edit = true" type="button" class="btn btn-outline-secondary btn-sm col-auto">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil" viewBox="0 0 16 16">
-                                            <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"></path>
+                                    <button v-if="!file.edit" @click="file.edit = true" type="button"
+                                        class="btn btn-outline-secondary btn-sm col-auto">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                            class="bi bi-pencil" viewBox="0 0 16 16">
+                                            <path
+                                                d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z">
+                                            </path>
                                         </svg>
                                     </button>
                                 </div>
@@ -212,19 +266,13 @@
 </template>
 
 <script>
-import toast from '../components/toasts.vue';
-import axios from "axios"; 
+import axios from "axios";
 
 export default {
-    inject: ['getSession', 'getSocket'],
-    components: {
-        toast
-    },
-    data() {
+    inject: ['session', 'socket', 'toast', 'options'],
+    data()
+    {
         return {
-            session: {},
-            socket: {},
-
             minScreenSizeError: false,
 
             showProgressBar: false,
@@ -235,133 +283,123 @@ export default {
             storageUsed: 0,
 
             fileURL: [],
-            sendFiles: [],     // List of files for send
-            
-            files: [],          // Loaded files
-            currentTime: '',
-
-            succCallback: [],     // Колбек - успешно
-            errCallback: [],      // Колбек - ошибка 
-            infoCallback: [],
-            
-            successMessage: null, // Текст успешной операции
-            errorMessage: null,   // Текст ошибки
-            infoMessage: null,
+            sendFiles: [],
+            files: [],
 
             forModal: {
                 index: -1,
-                name: '', 
+                name: '',
                 format: '',
                 weight: '',
                 actual: '',
                 author: '',
                 src: '',
                 type: '',
-			  	unlim: false
+                unlim: false,
             }
         }
     },
     methods: {
-        connect() {
-            this.session = this.getSession();
-            this.socket = this.getSocket();
-
-            this.succCallback = new bootstrap.Toast(document.getElementById("ToastSuccess"));
-            this.errCallback = new bootstrap.Toast(document.getElementById("ToastError"));
+        connect()
+        {
+            //
         },
 
-          // update timer to send cb
-        async getTime() {
-            // Дата - время коллбека
-            let date_ob = new Date();
-            let hour = date_ob.getHours();
-            if (hour < 10) hour = "0" + hour;
-            let min = date_ob.getMinutes();
-            if (min < 10) min = "0" + min;
-            let sec = date_ob.getSeconds();
-            if (sec < 10) sec = "0" + sec;
-            this.currentTime = hour + ':' + min + ':' + sec;
-        },
-            // Получение списка файлов, имеющихся на сервере
-        async getFiles() {
-            let response = await fetch(`/upload/files`, {
+        async getFiles()
+        {
+            let responseFiles = await fetch('/files/img', {
                 method: 'GET',
-                // THIS IS IMPORTANT
                 headers: new Headers({
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
                     'Access-Control-Allow-Origin': '*',
-                    'x-access-token' : JSON.parse(localStorage.getItem('user')).token,
-                })
+                    'x-access-token': JSON.parse(localStorage.getItem('user')).token,
+                }),
             });
-            response = await response.json();
+            responseFiles = await responseFiles.json();
 
-            this.files = response.files;
+            if (responseFiles.status === 'success') {
+                this.files = responseFiles.data;
+            } else {
+                this.toast('error', responseFiles.data);
+            }
 
-            this.storagePercent = response.fileStorageData[2];
-            this.storageUsed    = response.fileStorageData[1];
-            this.storageSize    = response.fileStorageData[0];
+            let responseStorage = await fetch('/storage', {
+                method: 'GET',
+                headers: new Headers({
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'x-access-token': JSON.parse(localStorage.getItem('user')).token,
+                }),
+            });
+            responseStorage = await responseStorage.json();
 
-            document.getElementById('progressBarStorage').setAttribute('style', 'width: ' + this.storagePercent);
+            if (responseStorage.status === 'success') {
+                this.storagePercent = responseStorage.data[2];
+                this.storageUsed = responseStorage.data[1];
+                this.storageSize = responseStorage.data[0];
+
+                document.getElementById('progressBarStorage').setAttribute('style', 'width: ' + this.storagePercent);
+            } else {
+                this.toast('error', responseFiles.data);
+            }
         },
 
-        updateBar() {
+        updateBar()
+        {
             document.getElementById('progressLoadForm').removeAttribute('style');
             document.getElementById('progressLoadForm').setAttribute('style', 'width: ' + this.progressLoaded + '%');
         },
 
-        // ---- FILE UPLOAD METHODS ----
-
-            // Выгрузка файлов (сделать через Axios с прогрессом)
-        handleFormSubmit(event) {
-            event.preventDefault(); // Отменяем стандартное поведение формы
+        handleFormSubmit(event)
+        {
+            event.preventDefault();
 
             if (!this.fileURL[0]) {
-                this.sayToUser('error', 'Выберите файлы для загрузки.');
+                this.toast('error', 'Выберите файлы для загрузки.');
                 return;
             }
 
             const xhr = new XMLHttpRequest();
-            xhr.open('POST', event.target.action); // Открываем соединение с сервером
+            xhr.open('POST', event.target.action);
             xhr.setRequestHeader('x-access-token', JSON.parse(localStorage.getItem('user')).token);
             this.showProgressBar = true;
 
-            let compose = this;     // this -> VUE
-            xhr.onload = function () {      // RES
-                if (this.status === 200) {  // this -> OBJ (RES)
-                        // Затираем файлы из инпута
+            let compose = this;
+            xhr.onload = function ()
+            {
+                if (this.status === 200) {
                     compose.$refs.inputFile.value = null;
-                        // Закрываем и обнуляем прогресс бар
                     compose.showProgressBar = false;
                     compose.progressLoaded = 0;
-                        // Сгружаем файлы из селект-списка для отображения
                     compose.sendFiles = [];
-                        // Запрос нового актуального списка файлов с учетом загрузки
                     compose.getFiles();
-                    compose.sayToUser('success', 'Файлы успешно загружены в хранилище.');
+                    compose.toast('success', 'Файлы успешно загружены в хранилище.');
                 } else {
-                    compose.sayToUser('error', 'Ошибка загрузки файла(ов).');
+                    compose.toast('error', 'Ошибка загрузки файла(ов).');
                 }
             };
 
-            xhr.upload.addEventListener('progress', function (event) {
+            xhr.upload.addEventListener('progress', function (event)
+            {
                 const percentComplete = (event.loaded / event.total) * 100;
                 compose.progressLoaded = Math.round(percentComplete);
                 compose.updateBar();
             });
-            
-            xhr.send(new FormData(event.target)); // Отправляем данные формы на сервер
+
+            xhr.send(new FormData(event.target));
         },
 
-            // Обработка выбранных для загрузки файлов 
-        handleUploads(event) {
+        handleUploads(event)
+        {
             this.sendFiles = [];
             this.fileURL = [];
-            
-            for (let i in event.target.files)
-                this.sendFiles.push(event.target.files[i]);
 
-                // Выкинуть дополнительные поля списка файлов
+            for (let i in event.target.files) {
+                this.sendFiles.push(event.target.files[i]);
+            }
+
             this.sendFiles.splice(this.sendFiles.length - 2, 2);
 
             for (let i in this.sendFiles) {
@@ -375,46 +413,44 @@ export default {
             }
         },
 
-        // ---- FILEWORKING ----
- 
-            // Удаление файла из серверного хранилища - предусмотреть модальное окно 
-        async deleteItem(index) {
+        async deleteItem(index)
+        {
             const id = this.files[index].id;
 
-            let response = await fetch('/upload/img', this.options('DELETE', { id }));
+            let response = await fetch('/files/img/delete', this.options('DELETE', { id }));
             response = await response.json();
 
-            if (response.cb === 'ok') {
+            if (response.status === 'success') {
                 this.files.splice(index, 1);
-                this.sayToUser('success', 'Файл успешно удален из хранилища.');
+                this.toast('success', 'Файл успешно удален из хранилища.');
             } else {
-                this.sayToUser('error', response.cb);
+                this.toast('error', response.cb);
             }
         },
 
-            // Вызов модального окна с передачей необходимых параметров для каждого их них
-        triggerModal(ops, indexorfile, src) {
+        triggerModal(ops, indexorfile, src)
+        {
             switch (ops) {
                 case 'read':
-				  	if (src === 'files') {
-					  this.forModal.index = indexorfile;
-					  this.forModal.name = this.files[indexorfile].name;
-					  this.forModal.actual = this.files[indexorfile].actual;
-					  this.forModal.author = this.files[indexorfile].author;
-					  this.forModal.src = this.files[indexorfile].src;
-					  this.forModal.format = this.files[indexorfile].format;
-					  this.forModal.weight = this.files[indexorfile].weight;
-					  this.forModal.type = this.files[indexorfile].type;
-					} else {
-					  this.forModal.index = indexorfile;
-					  this.forModal.name = this.sendFiles[indexorfile].fileName.split('.')[0];
-					  this.forModal.unlim = true;
-					  this.forModal.author = this.sendFiles[indexorfile].author;
-					  this.forModal.src = this.sendFiles[indexorfile].dataUrl;
-					  this.forModal.format = this.sendFiles[indexorfile].fileExtension;
-					  this.forModal.weight = ('weight');
-					  this.forModal.type = this.sendFiles[indexorfile].fileMimeType.split('/')[0];
-					}
+                    if (src === 'files') {
+                        this.forModal.index = indexorfile;
+                        this.forModal.name = this.files[indexorfile].name;
+                        this.forModal.actual = this.files[indexorfile].actual;
+                        this.forModal.author = this.files[indexorfile].author;
+                        this.forModal.src = this.files[indexorfile].src;
+                        this.forModal.format = this.files[indexorfile].format;
+                        this.forModal.weight = this.files[indexorfile].weight;
+                        this.forModal.type = this.files[indexorfile].type;
+                    } else {
+                        this.forModal.index = indexorfile;
+                        this.forModal.name = this.sendFiles[indexorfile].fileName.split('.')[0];
+                        this.forModal.unlim = true;
+                        this.forModal.author = this.sendFiles[indexorfile].author;
+                        this.forModal.src = this.sendFiles[indexorfile].dataUrl;
+                        this.forModal.format = this.sendFiles[indexorfile].fileExtension;
+                        this.forModal.weight = ('weight');
+                        this.forModal.type = this.sendFiles[indexorfile].fileMimeType.split('/')[0];
+                    }
                     // fetch '/open' 
                     // - success - open view-modal
                     // - error - error message
@@ -424,7 +460,7 @@ export default {
                     // addModal
                     break;
                 case 'delete':
-                        if (src === 'files') {
+                    if (src === 'files') {
                         this.forModal.index = indexorfile;
                         this.forModal.name = this.files[indexorfile].name;
                         this.forModal.actual = this.files[indexorfile].actual;
@@ -433,7 +469,7 @@ export default {
                         this.forModal.format = this.files[indexorfile].format;
                         this.forModal.weight = this.files[indexorfile].weight;
                         this.forModal.type = this.files[indexorfile].type;
-                        } else {
+                    } else {
                         this.forModal.index = indexorfile;
                         this.forModal.name = this.sendFiles[indexorfile].fileName.split('.')[0];
                         this.forModal.unlim = true;
@@ -442,57 +478,30 @@ export default {
                         this.forModal.format = this.sendFiles[indexorfile].fileExtension;
                         this.forModal.weight = ('weight');
                         this.forModal.type = this.sendFiles[indexorfile].fileMimeType.split('/')[0];
-                        }
+                    }
                     break;
             }
         },
-            // Скачать файл с сервера
-        downloadItem(file) {
+
+        downloadItem(file)
+        {
             axios({
-                    url: file.src,
-                    method: 'GET',
-                    responseType: 'blob',
-                }).then((response) => {
-                     let fileURL = window.URL.createObjectURL(new Blob([response.data]));
-                     let fileLink = document.createElement('a');
-                     fileLink.href = fileURL;
-                     fileLink.setAttribute('download', file.name + '.' + file.format);
-                     document.body.appendChild(fileLink);
-                     fileLink.click();
-                });
-        },
-            // Fetch params 
-        options(method, body) {
-            return {
-                method: method,
-                headers: {
-                    'Content-type': 'application/json; charset=UTF-8', // Indicates the content
-                    'x-access-token' : JSON.parse(localStorage.getItem('user')).token,
-                },
-                body: JSON.stringify(body),
-            }
-        },
-            // Быстрый вывод ответа пользователю
-        sayToUser(type, message) {
-            this.getTime();
-            switch (type) {
-            case 'success':
-                this.successMessage = message;
-                this.succCallback.show();
-                break;
-            case 'error':
-                this.errorMessage = message;
-                this.errCallback.show();
-                break;
-            case 'info':
-            default:
-                this.infoMessage = message;
-                this.infoCallback.show();
-            }
+                url: file.src,
+                method: 'GET',
+                responseType: 'blob',
+            }).then((response) =>
+            {
+                let fileURL = window.URL.createObjectURL(new Blob([response.data]));
+                let fileLink = document.createElement('a');
+                fileLink.href = fileURL;
+                fileLink.setAttribute('download', file.name + '.' + file.format);
+                document.body.appendChild(fileLink);
+                fileLink.click();
+            });
         },
     },
-        // Действие при загрузке страницы
-    mounted() {
+    mounted()
+    {
         this.connect();
         this.getFiles();
     }

@@ -1,5 +1,5 @@
 const { Op } = require("sequelize");
-const { Program, Compose, Event } = require('../../models');
+const { Program, Compose, Event, User } = require('../../models');
 
 const programService = require('./ProgramService');
 
@@ -26,19 +26,26 @@ class ComposeService
             userComposes: await Compose.findAll({
                 nest: true,
                 where: {
-                    authorName: user.name,
+                    authorId: user.userId,
                 },
-                include: {
-                    as: 'programs',
-                    model: Program,
-                    include: {
-                        as: 'events',
-                        model: Event,
-                        attributes: ['id', 'name', 'src', 'type', 'time', 'order'],
+                include: [
+                    {
+                        as: 'programs',
+                        model: Program,
+                        include: {
+                            as: 'events',
+                            model: Event,
+                            attributes: ['id', 'name', 'src', 'type', 'time', 'order'],
+                        },
+                        attributes: ['id', 'name', 'timeToSwap', 'isActive'],
                     },
-                    attributes: ['id', 'name', 'timeToSwap', 'isActive'],
-                },
-                attributes: ['id', 'name', 'comment', 'date', 'isSpecial', 'authorName', 'screen', 'status', 'message'],
+                    {
+                        as: 'author',
+                        model: User,
+                        attributes: ['name'],
+                    },
+                ],
+                attributes: ['id', 'name', 'comment', 'date', 'isSpecial', 'screen', 'status', 'message'],
                 order: [
                     [
                         { model: Program, as: 'programs' },
@@ -55,21 +62,28 @@ class ComposeService
             otherComposes: await Compose.findAll({
                 nest: true,
                 where: {
-                    authorName: {
-                        [Op.ne]: user.name,
+                    authorId: {
+                        [Op.ne]: user.userId,
                     },
                 },
-                include: {
-                    as: 'programs',
-                    model: Program,
-                    include: {
-                        as: 'events',
-                        model: Event,
-                        attributes: ['id', 'name', 'src', 'type', 'time', 'order'],
+                include: [
+                    {
+                        as: 'programs',
+                        model: Program,
+                        include: {
+                            as: 'events',
+                            model: Event,
+                            attributes: ['id', 'name', 'src', 'type', 'time', 'order'],
+                        },
+                        attributes: ['id', 'name', 'timeToSwap', 'isActive'],
                     },
-                    attributes: ['id', 'name', 'timeToSwap', 'isActive'],
-                },
-                attributes: ['id', 'name', 'comment', 'date', 'isSpecial', 'authorName', 'screen', 'status', 'message'],
+                    {
+                        as: 'author',
+                        model: User,
+                        attributes: ['name'],
+                    },
+                ],
+                attributes: ['id', 'name', 'comment', 'date', 'isSpecial', 'screen', 'status', 'message'],
                 order: [
                     [
                         { model: Program, as: 'programs' },
@@ -226,7 +240,7 @@ class ComposeService
             }
         }
 
-        return await this.getOne({
+        return this.getOne({
             user: user,
             body: {
                 id: compose.id,
@@ -246,9 +260,9 @@ class ComposeService
     async deleteOne(params)
     {
         const { user } = params;
-        this.checkRole(user.role);
-
         const { id, withPrograms, byModer } = params?.body;
+
+        this.checkRole(user.role);
 
         const compose = await Compose.findOne({
             where: {
@@ -375,7 +389,7 @@ class ComposeService
             }
         }
 
-        return await this.getOne({
+        return this.getOne({
             user: user,
             body: {
                 id: id,

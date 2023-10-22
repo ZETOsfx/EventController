@@ -63,12 +63,14 @@ class AuthService
             },
         });
 
+        let roleStr = user.role.role;
+
         const token = jwt.sign(
             {
                 userId: user.id,
                 login,
                 name: user.name,
-                role: user['Role.role'],
+                role: roleStr,
             },
             process.env.TOKEN_KEY,
             {

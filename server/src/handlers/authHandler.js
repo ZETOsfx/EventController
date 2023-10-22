@@ -1,4 +1,4 @@
-const authService = require('../services/AuthService').default;
+const authService = require('../services/AuthService');
 
 const handle = async (req, res) =>
 {

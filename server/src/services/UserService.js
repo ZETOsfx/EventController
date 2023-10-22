@@ -12,6 +12,39 @@ const { User, Role } = require('../../models');
 class UserService
 {
     /**
+     * Получить список всех аккаунтов в системе
+     *
+     * @param params Входные параметры запроса
+     * @return Array Список аккаунтов в системе
+     */
+    async getAll(params)
+    {
+        this.accessCheck(params);
+
+        let response = [];
+
+        let users = await User.findAll({
+            include: {
+                as: 'role',
+                model: Role,
+                attributes: ['role'],
+            },
+        });
+
+        users.forEach(user =>
+        {
+            response.push({
+                id: user.id,
+                name: user.name,
+                role: user.role.role,
+                login: user.login,
+            });
+        });
+
+        return response;
+    }
+
+    /**
      * Добавление нового аккаунта
      *
      * @param params Входные параметры запроса
@@ -29,13 +62,15 @@ class UserService
 
         const userExists = await this.isUserExists(name, login);
 
-        if (userExists.id) {
+        if (userExists instanceof User) {
             throw new Error('Пользователь с данным логином или именем уже существует');
         }
 
         const roleExists = await this.isRoleExists(role);
 
-        if (!roleExists.id) {
+        console.log(role);
+
+        if (!(roleExists instanceof Role)) {
             throw new Error('Некорректный параметр: РОЛЬ');
         }
 
@@ -50,39 +85,12 @@ class UserService
 
         user.role = roleExists.role;
 
-        return user;
-    }
-
-    /**
-     * Получить список всех аккаунтов в системе
-     *
-     * @param params Входные параметры запроса
-     * @return Array Список аккаунтов в системе
-     */
-    async getAll(params)
-    {
-        this.accessCheck(params);
-
-        let response = [];
-
-        let users = await User.findAll({
-            include: {
-                model: Role,
-            },
-        });
-
-        users.forEach(user =>
-        {
-            response.push({
-                id: user.id,
-                name: user.name,
-                role: user['Role.role'],
-                login: user.login,
-                email: user.email,
-            });
-        });
-
-        return response;
+        return {
+            id: user.id,
+            name: name,
+            role: role,
+            login: login,
+        };
     }
 
     /**
@@ -115,10 +123,8 @@ class UserService
 
         const hashedPassword = await argon2.hash(password);
 
-        let updated;
-
         if (password !== '') {
-            updated = await User.update({
+            return User.update({
                 login: login,
                 name: name,
                 roleId: roleExists.id,
@@ -129,7 +135,7 @@ class UserService
                 },
             });
         } else {
-            updated = await User.update({
+            return User.update({
                 login: login,
                 name: name,
                 roleId: roleExists.id,
@@ -139,8 +145,6 @@ class UserService
                 },
             });
         }
-
-        return 'Updated: ' + updated[0];
     }
 
     /**
@@ -152,16 +156,13 @@ class UserService
     async deleteOne(params)
     {
         this.accessCheck(params);
-
         const { id } = params.body;
 
-        let user = await User.destroy({
+        return User.destroy({
             where: {
                 id: id,
             },
         });
-
-        return user[0] ? 'OK' : 'NULL DELETE';
     }
 
     /**

@@ -1,4 +1,4 @@
-const fileService = require('../../services/FileService');
+const fileService = require('../../../services/FileImageService');
 
 const handle = async (req, res) =>
 {

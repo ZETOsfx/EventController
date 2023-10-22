@@ -22,7 +22,7 @@ const getRoutes = (app) =>
      * -- стандартные CRUD-операции 
      * -> Доступны только администратору
      */
-    app.get("/accounts/list", authMw, require("./handlers/accounts/accountListHandler"));
+    app.get("/accounts", authMw, require("./handlers/accounts/accountListHandler"));
     app.post("/accounts/add", authMw, require("./handlers/accounts/addAccountHandler"));
     app.post("/accounts/update", authMw, require("./handlers/accounts/updateAccountHandler"));
     app.delete("/accounts/delete", authMw, require("./handlers/accounts/deleteAccountHandler"));
@@ -65,7 +65,7 @@ const getRoutes = (app) =>
      * Операции по настройке трансляции
      * -> Доступны всем авторизованным, кроме менеджера
      */
-    app.get("/setting/all", require("./handlers/setting/getWorkingDataHandler"));
+    app.get("/setting/all", authMw, require("./handlers/setting/getWorkingDataHandler"));
 
     app.get("/setting/program", authMw, require("./handlers/setting/Program/getProgramHandler"));
     app.post("/setting/program", authMw, require("./handlers/setting/Program/addProgramHandler"));

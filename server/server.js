@@ -44,22 +44,24 @@ app.use(
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 
-// // --- Connect Vue.js interface ---
-//
-// app.get('/js/vue.js', (req, res) => {
-//     res
-//         .header("Content-Type", "application/javascript; charset=UTF-8")
-//         .sendFile(`${__dirname.substring(0, __dirname.length - 7)}/client/dist/main.js`);
-// });
-//
-// app.use(history({ verbose: true, index: '/', history: true }));
-//
-// app.get("/", function(req, res) {
-//     res.render(__dirname + '/app.ejs', {
-//         API_URL: process.env.API_URL,
-//         NODE_ENV: process.env.NODE_ENV,
-//     });
-// });
+// --- Connect Vue.js interface ---
+
+app.get('/js/vue.js', (req, res) =>
+{
+    res
+        .header("Content-Type", "application/javascript; charset=UTF-8")
+        .sendFile(`${__dirname.substring(0, __dirname.length - 7)}/client/dist/main.js`);
+});
+
+app.use(history({ verbose: true, index: '/', history: true }));
+
+app.get("/", function (req, res)
+{
+    res.render(__dirname + '/app.ejs', {
+        API_URL: process.env.API_URL,
+        NODE_ENV: process.env.NODE_ENV,
+    });
+});
 
 const getRoutes = require('./src/router');
 getRoutes(app);

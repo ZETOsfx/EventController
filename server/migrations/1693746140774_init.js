@@ -3,55 +3,10 @@ const { PgLiteral } = require("node-pg-migrate");
 
 exports.shorthands = undefined;
 
-exports.up = (pgm) => {
-
+exports.up = (pgm) =>
+{
     pgm.createExtension("uuid-ossp", {
         ifNotExists: true
-    });
-
-    /**
-     * Транслируемые события в текущий момент
-     */
-    pgm.createTable('cast_events', {
-        id: {
-            type: "uuid",
-            default: new PgLiteral("uuid_generate_v4()"),
-            notNull: true,
-            primaryKey: true
-        },
-        name: {
-            type: 'varchar(50)',
-            notNull: true,
-        },
-        src: {
-            type: 'text',
-            notNull: true,
-        },
-        is_active: {
-            type: 'boolean',
-            notNull: true,
-        },
-        type: {
-            type: 'integer',
-            notNull: true,
-        },
-        time: {
-            type: 'integer',
-            notNull: true,
-        },
-        order: {
-            type: 'integer',
-            notNull: true,
-        },
-        screen: {
-            type: 'integer',
-            notNull: true,
-        },
-        created_at: {
-            type: 'timestamp',
-            default: pgm.func('NOW()'),
-            notNull: true,
-        },
     });
 
     /**
@@ -186,10 +141,10 @@ exports.up = (pgm) => {
             type: 'boolean',
             notNull: true,
         },
-        author: {
-            type: 'varchar(16)',
+        author_id: {
+            type: "uuid",
             notNull: true,
-            references: '"users" (name)',
+            references: '"users" (id)',
             onDelete: 'cascade',
             onUpdate: 'cascade',
         },
@@ -222,10 +177,10 @@ exports.up = (pgm) => {
             type: 'varchar(30)',
             notNull: true,
         },
-        author: {
-            type: 'varchar(16)',
+        author_id: {
+            type: "uuid",
             notNull: true,
-            references: '"users" (name)',
+            references: '"users" (id)',
             onDelete: 'cascade',
             onUpdate: 'cascade',
         },
@@ -353,10 +308,10 @@ exports.up = (pgm) => {
             type: 'varchar(10)',
             notNull: true,
         },
-        author: {
-            type: 'varchar(16)',
+        author_id: {
+            type: "uuid",
             notNull: true,
-            references: '"users" (name)',
+            references: '"users" (id)',
             onDelete: 'cascade',
             onUpdate: 'cascade',
         },
@@ -374,6 +329,8 @@ exports.up = (pgm) => {
             notNull: true,
         },
     });
+    pgm.createIndex('notes', ['addressed_to', 'expires']);
+
     pgm.createTable('user_note', {
         id: {
             type: "uuid",
@@ -401,6 +358,7 @@ exports.up = (pgm) => {
             notNull: true,
         },
     });
+    pgm.createIndex('user_note', 'user_id');
 
     /**
      * Данные файлов
@@ -428,10 +386,10 @@ exports.up = (pgm) => {
             type: 'varchar(10)',
             notNull: true,
         },
-        author: {
-            type: 'varchar(16)',
+        author_id: {
+            type: "uuid",
             notNull: true,
-            references: '"users" (name)',
+            references: '"users" (id)',
             onDelete: 'cascade',
             onUpdate: 'cascade',
         },
@@ -459,11 +417,6 @@ exports.up = (pgm) => {
     pgm.sql(`INSERT INTO roles (role) VALUES ('manager');`);
     pgm.sql(`INSERT INTO roles (role) VALUES ('editor');`);
 
-    /**
-     * Default user:
-     * Login: admin
-     * Password: 1
-     */
     pgm.sql(`INSERT INTO users (name, role_id, pass_hash, login) VALUES (
         'System', 
         (SELECT id FROM roles WHERE role = 'admin'), 
@@ -472,8 +425,8 @@ exports.up = (pgm) => {
     );`);
 };
 
-exports.down = (pgm) => {
-    pgm.dropTable('cast_events');
+exports.down = (pgm) =>
+{
     pgm.dropTable('files');
     pgm.dropTable('user_note');
     pgm.dropTable('notes');

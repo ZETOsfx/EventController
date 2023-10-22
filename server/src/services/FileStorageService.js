@@ -15,19 +15,27 @@ class FileStorageService
      *
      * @return { occupiedSpace } Объем занятого ресурсами пространства на диске
      */
-    async getWorkload()
+    getWorkload(req, res)
     {
         let fileStorageData = [];
 
-        const child = exec('df -h ' + process.env.DISK_FREE + " | awk '{print $2, $3, $5}' | tail -n +2", (error, stdout, stderr) =>
-        {
-            fileStorageData = stdout.toString().split(' ');
-            fileStorageData[2] = fileStorageData[2].split('\n')[0];
+        try {
+            const state = exec('df -h ' + process.env.DISK_FREE + " | awk '{print $2, $3, $5}' | tail -n +2", (error, stdout, stderr) =>
+            {
+                fileStorageData = stdout.toString().split(' ');
+                fileStorageData[2] = fileStorageData[2].split('\n')[0];
 
-            return {
-                occupiedSpace: fileStorageData,
-            };
-        });
+                res.status(200).json({
+                    status: 'success',
+                    data: fileStorageData,
+                });
+            });
+        } catch (error) {
+            res.status(400).json({
+                status: 'error',
+                data: error.message,
+            });
+        }
     }
 }
 

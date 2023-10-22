@@ -444,6 +444,73 @@ class RequestService
     }
 
     /**
+    * Получить данные активной программы в формате JSON (вывод на трансляцию)
+    *
+    * @return {Promise<*>} Список страниц для трансляции
+    */
+    async getActiveJSON()
+    {
+        const request = await Request.findOne({
+            nest: true,
+            where: {
+                isActive: true,
+            },
+            include: {
+                as: 'compose',
+                model: Compose,
+                include: {
+                    as: 'programs',
+                    model: Program,
+                    where: {
+                        isActive: true,
+                    },
+                    include: {
+                        as: 'events',
+                        model: Event,
+                        attributes: ['src', 'type'],
+                    },
+                    attributes: ['id', 'name'],
+                },
+                attributes: ['id', 'name'],
+            },
+            attributes: ['id'],
+            order: [
+                [
+                    { model: Compose, as: 'compose' },
+                    { model: Program, as: 'programs' },
+                    { model: Event, as: 'events' },
+                    'order', 'ASC'
+                ],
+            ],
+        });
+
+        let events = [];
+        let eventsJson = [];
+        let datetimeOrder = (new Date()).getTime();
+
+        if (request instanceof Request) {
+            request.compose.programs[0].events;
+        }
+
+        for (let i in events) {
+            eventsJson.push({
+                time: new Date(datetimeOrder),
+                type: events[i].type,
+                src: events[i].src,
+            });
+            datetimeOrder += events[i].time * 1000;
+        }
+
+        eventsJson.push({
+            time: new Date(datetimeOrder),
+            type: "end",
+            src: "src"
+        });
+
+        return eventsJson;
+    }
+
+    /**
      * Взятие в обработку / завершение процесса обработки
      *
      * @param params Входные POST параметры.
@@ -454,7 +521,7 @@ class RequestService
         const { user } = params;
         this.checkRole(user.role);
 
-        const { id } = params?.body;
+        const { id } = params.body;
 
         return await Request.update({
             inProcessing: Sequelize.literal('NOT inProcessing'),
@@ -463,7 +530,7 @@ class RequestService
             where: {
                 id: id,
             },
-        })[0];
+        });
     }
 
     /**
@@ -477,17 +544,15 @@ class RequestService
         const { user } = params;
         this.checkRole(user.role);
 
-        const { id } = params?.body;
-
         return Request.update({
             inProcessing: false,
             changer: null,
         }, {
             where: {
-                id: id,
+                inProcessing: true,
                 changer: user.name,
             },
-        })[0];
+        });
     }
 
     /**

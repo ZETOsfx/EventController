@@ -18,11 +18,15 @@ const verifyToken = (req, res, next) =>
         return res.status(403).send("A token is required for authentication");
     }
 
-    try {
-        req.user = jwt.verify(token, process.env.TOKEN_KEY);
-    } catch (err) {
-        return res.status(401).redirect('/login');
-    }
+    jwt.verify(token, process.env.TOKEN_KEY, function (err, decoded)
+    {
+        if (err) {
+            if (err.name === 'TokenExpiredError') {
+                return res.status(301).redirect('/login');
+            }
+        }
+        req.user = decoded;
+    });
 
     return next();
 };

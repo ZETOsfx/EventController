@@ -16,7 +16,7 @@ class ReportService
      * Отправить отчет об ошибке в системе
      *
      * @param params Входные POST параметры
-     * @return Promise<string> Результат попытки отправить отчет
+     * @return number Результат попытки отправить отчет
      */
     async sendReport(params)
     {
@@ -79,7 +79,7 @@ class ReportService
                 addressedTo: user.name,
             });
 
-            return 'Ваше сообщение об ошибке успешно отправлено.';
+            return 1;
         } catch (err) {
             throw new Error(err.message);
         }

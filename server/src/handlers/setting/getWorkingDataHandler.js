@@ -1,5 +1,5 @@
 const programService = require('../../services/ProgramService');
-const composeService = require('../../../services/ComposeService');
+const composeService = require('../../services/ComposeService');
 
 const handle = async (req, res) =>
 {

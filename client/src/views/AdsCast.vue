@@ -11,7 +11,8 @@
                             <p class="card-text"> {{ ad.comment }} </p>
                         </div>
                         <div v-if="ad.timeOfLife === '9999-01-01'" class="card-footer"> Актуально: бессрочно </div>
-                        <div v-if="ad.timeOfLife !== '9999-01-01'" class="card-footer"> Актуально до: {{ ad.timeOfLife }} </div>
+                        <div v-if="ad.timeOfLife !== '9999-01-01'" class="card-footer"> Актуально до: {{ ad.timeOfLife }}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -21,29 +22,39 @@
 
 <script>
 export default {
-    data() {
+    inject: ['toast'],
+    data()
+    {
         return {
             ads: [],
         }
     },
     methods: {
-        async getAds() {
-            let response = await fetch(` /note/public`, {
+        async getAds()
+        {
+            let response = await fetch('/notes/cast', {
                 method: 'GET',
-                // THIS IS IMPORTANT
                 headers: new Headers({
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    'Access-Control-Allow-Origin': '*'
-                }) 
+                    'Access-Control-Allow-Origin': '*',
+                })
             });
-		    this.ads = (await response.json());
+            response = await response.json();
+
+            if (response.status === 'success') {
+                this.ads = response.data;
+            } else {
+                this.toast('error', 'Что-то пошло не так :(');
+            }
         }
     },
 
-    async mounted() {
+    async mounted()
+    {
         await this.getAds();
-        setInterval(async function() {
+        setInterval(async function ()
+        {
             await this.getAds();
         }, 60000);
     }

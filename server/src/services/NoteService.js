@@ -1,5 +1,5 @@
 const { Op } = require("sequelize");
-const { Note, User_Note } = require('../../models');
+const { Note, User, User_Note } = require('../../models');
 
 /**
  * Class NoteService
@@ -17,7 +17,6 @@ class NoteService
     async getAll(params)
     {
         const { user } = params;
-        const { unread } = params.body;
 
         const notes = await Note.findAll({
             where: {
@@ -30,27 +29,54 @@ class NoteService
                     },
                 ],
             },
+            include: {
+                as: 'author',
+                model: User,
+                attributes: ['name'],
+            },
+            nest: true,
             order: [
                 ['createdAt', 'DESC'],
             ],
+            attributes: ['id', 'name', 'comment', 'addressedTo', 'expires', 'onBroadcast'],
         });
 
-        if (unread !== 0) {
-            await User_Note.destroy({
-                where: {
-                    userId: user.userId,
-                },
-            });
+        await User_Note.destroy({
+            where: {
+                userId: user.userId,
+            },
+        });
 
-            for (let i in notes) {
-                await User_Note.create({
-                    userId: user.userId,
-                    noteId: notes[i].id,
-                });
-            }
+        for (let i in notes) {
+            await User_Note.create({
+                userId: user.userId,
+                noteId: notes[i].id,
+            });
         }
 
         return notes;
+    }
+
+    /**
+     * Получить конкретное уведомление из хранилища
+     * 
+     * @param {*} id ID уведомления
+     * @returns 
+     */
+    async getOne(id)
+    {
+        return Note.findOne({
+            where: {
+                id: id,
+            },
+            include: {
+                as: 'author',
+                model: User,
+                attributes: ['name'],
+            },
+            nest: true,
+            attributes: ['id', 'name', 'comment', 'addressedTo', 'expires', 'onBroadcast'],
+        });
     }
 
     /**
@@ -65,9 +91,16 @@ class NoteService
                 onBroadcast: true,
                 addressedTo: null,
             },
+            include: {
+                as: 'author',
+                model: User,
+                attributes: ['name'],
+            },
+            nest: true,
             order: [
                 ['createdAt', 'DESC'],
             ],
+            attributes: ['id', 'name', 'comment', 'addressedTo', 'expires', 'onBroadcast'],
         });
     }
 
@@ -80,9 +113,9 @@ class NoteService
     async addOne(params)
     {
         const { user } = params;
-        await this.checkRole(user.role);
+        this.checkRole(user.role);
 
-        const { name, comment, translate, unlimited, addressedTo } = params.body;
+        const { name, comment, translate, unlimited, addressedTo } = params?.body;
         let { time } = params?.body;
 
         if (name === '' || comment === '') {
@@ -101,9 +134,9 @@ class NoteService
             name: name,
             comment: comment,
             expires: time,
-            authorName: user.name,
+            authorId: user.userId,
             onBroadcast: translate,
-            addressedTo: addressedTo | null,
+            addressedTo: addressedTo,
         });
 
         if (!addressedTo) {
@@ -113,7 +146,7 @@ class NoteService
             });
         }
 
-        return note;
+        return this.getOne(note.id);
     }
 
     /**
@@ -125,7 +158,7 @@ class NoteService
     async deleteOne(params)
     {
         const { user } = params;
-        await this.checkRole(user.role);
+        this.checkRole(user.role);
 
         const { id } = params.body;
 
@@ -143,6 +176,7 @@ class NoteService
      */
     checkRole(role)
     {
+        console.log(role);
         if (!['admin', 'moderator', 'manager'].includes(role)) {
             throw new Error('Недостаточно прав доступа');
         }

@@ -13,15 +13,15 @@ module.exports = (sequelize, DataTypes) =>
          */
         static associate(models)
         {
-            // define association here
             Note.belongsTo(models.User, {
-                foreignKey: 'authorName',
-                targetKey: 'name',
+                foreignKey: 'authorId',
+                targetKey: 'id',
                 as: 'author',
             });
 
             Note.belongsToMany(models.User, {
                 through: 'User_Subscribe',
+                as: 'read',
             });
         }
     }
@@ -29,18 +29,19 @@ module.exports = (sequelize, DataTypes) =>
     Note.init({
         id: {
             type: DataTypes.UUID,
+            defaultValue: Sequelize.UUIDV4,
             primaryKey: true,
             allowNull: false,
         },
         name: DataTypes.STRING(100),
         comment: DataTypes.TEXT,
         expires: DataTypes.STRING(10),
-        authorName: {
-            field: 'author',
+        authorId: {
+            field: 'author_id',
             type: DataTypes.STRING(16),
             references: {
                 model: 'User',
-                key: 'name',
+                key: 'id',
             },
         },
         onBroadcast: {

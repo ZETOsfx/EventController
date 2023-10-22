@@ -13,13 +13,18 @@ module.exports = (sequelize, DataTypes) =>
          */
         static associate(models)
         {
-            // define association here
+            File.belongsTo(models.User, {
+                foreignKey: 'authorId',
+                targetKey: 'id',
+                as: 'author',
+            });
         }
     }
 
     File.init({
         id: {
             type: DataTypes.UUID,
+            defaultValue: Sequelize.UUIDV4,
             primaryKey: true,
             allowNull: false,
         },
@@ -27,12 +32,12 @@ module.exports = (sequelize, DataTypes) =>
         src: DataTypes.TEXT,
         type: DataTypes.STRING(5),
         weight: DataTypes.STRING(10),
-        authorName: {
-            field: 'author',
+        authorId: {
+            field: 'author_id',
             type: DataTypes.STRING(16),
             references: {
                 model: 'User',
-                key: 'name',
+                key: 'id',
             },
         },
         expires: DataTypes.DATE,

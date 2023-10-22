@@ -1,5 +1,5 @@
 const { Op } = require("sequelize");
-const { Event, Program, Compose, Request } = require('../../models');
+const { Event, Program, User } = require('../../models');
 
 /**
  * Class ProgramService
@@ -25,14 +25,21 @@ class ProgramService
         return Program.findAll({
             nest: true,
             where: {
-                authorName: user.name,
+                authorId: user.userId,
                 composeId: null,
             },
-            include: {
-                as: 'events',
-                model: Event,
-                attributes: ['id', 'name', 'src', 'type', 'time', 'order'],
-            },
+            include: [
+                {
+                    as: 'events',
+                    model: Event,
+                    attributes: ['id', 'name', 'src', 'type', 'time', 'order'],
+                },
+                {
+                    as: 'author',
+                    model: User,
+                    attributes: ['name'],
+                },
+            ],
             order: [
                 ['createdAt', 'DESC'],
                 [
@@ -97,7 +104,7 @@ class ProgramService
         const test = await Program.findOne({
             where: {
                 name: name,
-                authorName: user.name,
+                authorId: user.userId,
             },
         });
 
@@ -107,7 +114,7 @@ class ProgramService
 
         const program = await Program.create({
             name: name,
-            authorName: user.name,
+            authorId: user.userId,
             composeId: null,
             timeToSwap: null,
         });
@@ -138,8 +145,6 @@ class ProgramService
                 }
                 break;
             case 'default':
-                const t = await Event.transaction();
-
                 try {
                     await Event.create({
                         name: "Объявления в системе",
@@ -149,7 +154,7 @@ class ProgramService
                         type: 'webform',
                         time: 40,
                         programId: program.id,
-                    }, { transaction: t });
+                    });
                     await Event.create({
                         name: "Карта К3",
                         src: 'http://webrobo.mgul.ac.ru:3000/forms/K3_Pascal_map/',
@@ -158,7 +163,7 @@ class ProgramService
                         type: 'webform',
                         time: 15,
                         programId: program.id,
-                    }, { transaction: t });
+                    });
                     await Event.create({
                         name: "Карта Артек",
                         src: 'http://webrobo.mgul.ac.ru:3000/forms/Artek_Pascal_map/',
@@ -167,7 +172,7 @@ class ProgramService
                         type: 'webform',
                         time: 15,
                         programId: program.id,
-                    }, { transaction: t });
+                    });
                     await Event.create({
                         name: "К3 - Артек",
                         src: 'http://webrobo.mgul.ac.ru:3000/forms/K3-Artek/',
@@ -176,7 +181,7 @@ class ProgramService
                         type: 'webform',
                         time: 15,
                         programId: program.id,
-                    }, { transaction: t });
+                    });
                     await Event.create({
                         name: "Аудитории - Гидра",
                         src: 'http://webrobo.mgul.ac.ru:3000/forms/Hydra-K3g/',
@@ -185,7 +190,7 @@ class ProgramService
                         type: 'webform',
                         time: 15,
                         programId: program.id,
-                    }, { transaction: t });
+                    });
                     await Event.create({
                         name: "Гидра - Влажность",
                         src: 'http://webrobo.mgul.ac.ru:3000/forms/TV_Hum/',
@@ -194,7 +199,7 @@ class ProgramService
                         type: 'webform',
                         time: 15,
                         programId: program.id,
-                    }, { transaction: t });
+                    });
                     await Event.create({
                         name: "Гидра - Температура",
                         src: 'http://webrobo.mgul.ac.ru:3000/forms/TV_Temp/',
@@ -203,11 +208,8 @@ class ProgramService
                         type: 'webform',
                         time: 15,
                         programId: program.id,
-                    }, { transaction: t });
-
-                    await t.commit();
+                    });
                 } catch (err) {
-                    await t.rollback();
                     throw new Error(err.message);
                 }
         }
@@ -258,7 +260,7 @@ class ProgramService
             }
         }
 
-        return await this.getOne({
+        return this.getOne({
             user: user,
             body: {
                 id: id,
@@ -276,76 +278,13 @@ class ProgramService
         const { user } = params;
         this.checkRole(user.role);
 
-        const { programId } = params?.body;
+        const { id } = params?.body;
 
         return Program.destroy({
             where: {
-                id: programId,
+                id: id,
             },
         });
-    }
-
-    /**
-     * Получить данные активной программы в формате JSON (вывод на трансляцию)
-     *
-     * @return {Promise<*>} Список страниц для трансляции
-     */
-    async getActiveJSON()
-    {
-        const request = await Request.findOne({
-            nest: true,
-            where: {
-                isActive: true,
-            },
-            include: {
-                as: 'compose',
-                model: Compose,
-                include: {
-                    as: 'programs',
-                    model: Program,
-                    where: {
-                        isActive: true,
-                    },
-                    include: {
-                        as: 'events',
-                        model: Event,
-                        attributes: ['src', 'type'],
-                    },
-                    attributes: ['id', 'name'],
-                },
-                attributes: ['id', 'name'],
-            },
-            attributes: ['id'],
-            order: [
-                [
-                    { model: Compose, as: 'compose' },
-                    { model: Program, as: 'programs' },
-                    { model: Event, as: 'events' },
-                    'order', 'ASC'
-                ],
-            ],
-        });
-
-        let eventsJson = [];
-        let datetimeOrder = (new Date()).getTime();
-        const events = request.compose.programs[0].events;
-
-        for (let i in events) {
-            eventsJson.push({
-                time: new Date(datetimeOrder),
-                type: events[i].type,
-                src: events[i].src,
-            });
-            datetimeOrder += events[i].time * 1000;
-        }
-
-        eventsJson.push({
-            time: new Date(datetimeOrder),
-            type: "end",
-            src: "src"
-        });
-
-        return eventsJson;
     }
 
     /**
