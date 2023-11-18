@@ -77,6 +77,7 @@ const getRoutes = (app) =>
     app.delete("/setting/compose", authMw, require("./handlers/setting/Compose/deleteComposeHandler"));
     app.post("/setting/compose/update", authMw, require("./handlers/setting/Compose/updateComposeHandler"));
     app.post("/setting/compose/send", authMw, require("./handlers/setting/Compose/sendComposeHandler"));
+    app.post("/setting/compose/recall", authMw, require("./handlers/setting/Compose/recallComposeHandler"));
 
     /**
      * Операции по модерированию трансляции

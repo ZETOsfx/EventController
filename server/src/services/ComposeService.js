@@ -4,8 +4,8 @@ const { Program, Compose, Event, User } = require('../../models');
 const programService = require('./ProgramService');
 
 /**
- * Class ProgramService
- * Работа с аккаунтами пользователей
+ * Class ComposeService
+ * Работа с композициями программ
  *
  * @package src/services
  */
@@ -45,7 +45,7 @@ class ComposeService
                         attributes: ['name'],
                     },
                 ],
-                attributes: ['id', 'name', 'comment', 'date', 'isSpecial', 'screen', 'status', 'message'],
+                attributes: ['id', 'name', 'comment', 'date', 'isSpecial', 'status', 'message'],
                 order: [
                     [
                         { model: Program, as: 'programs' },
@@ -83,7 +83,7 @@ class ComposeService
                         attributes: ['name'],
                     },
                 ],
-                attributes: ['id', 'name', 'comment', 'date', 'isSpecial', 'screen', 'status', 'message'],
+                attributes: ['id', 'name', 'comment', 'date', 'isSpecial', 'status', 'message'],
                 order: [
                     [
                         { model: Program, as: 'programs' },
@@ -123,17 +123,24 @@ class ComposeService
             where: {
                 id: id,
             },
-            include: {
-                as: 'programs',
-                model: Program,
-                include: {
-                    as: 'events',
-                    model: Event,
-                    attributes: ['id', 'name', 'src', 'type', 'time', 'order'],
+            include: [
+                {
+                    as: 'programs',
+                    model: Program,
+                    include: {
+                        as: 'events',
+                        model: Event,
+                        attributes: ['id', 'name', 'src', 'type', 'time', 'order'],
+                    },
+                    attributes: ['id', 'name', 'timeToSwap', 'isActive'],
                 },
-                attributes: ['id', 'name', 'timeToSwap', 'isActive'],
-            },
-            attributes: ['id', 'name', 'comment', 'date', 'isSpecial', 'authorName', 'screen', 'status', 'message'],
+                {
+                    as: 'author',
+                    model: User,
+                    attributes: ['name'],
+                },
+            ],
+            attributes: ['id', 'name', 'comment', 'date', 'isSpecial', 'status', 'message'],
             order: [
                 [
                     { model: Program, as: 'programs' },
@@ -166,12 +173,12 @@ class ComposeService
         const { user } = params;
         this.checkRole(user.role);
 
-        const { name, screen, programsId, times, isSpec, comment = '' } = params?.body;
+        const { name, screen, programsId, times, isSpec, comment = '' } = params.body;
 
         const test = await Compose.findOne({
             where: {
                 name: name,
-                authorName: user.name,
+                authorId: user.userId,
             },
         });
 
@@ -196,18 +203,6 @@ class ComposeService
             if (!name || (programsId[0] === '-' || programsId[1] === '-' || programsId[2] === '-') || !screen) {
                 throw new Error('Некорректный запрос');
             }
-
-            const programs = await Program.findAll({
-                where: {
-                    id: {
-                        [Op.or]: programsId,
-                    }
-                },
-            });
-
-            if (programs.length !== 3) {
-                throw new Error('Некорректный ID');
-            }
         }
 
         const compose = await Compose.create({
@@ -215,17 +210,42 @@ class ComposeService
             comment: comment,
             date: currentDate,
             isSpecial: isSpec,
-            authorName: user.name,
-            screen: screen,
+            authorId: user.userId,
+            status: 'created',
         });
 
         let timings = times;
+        let processedIds = [];
 
         if (!isSpec) {
             timings = ['08:40:00', '10:15:00', '12:00:00'];
         }
 
         for (let index in programsId) {
+            if (processedIds.includes(programsId[index])) {
+                const dp = await Program.findOne({
+                    where: { id: programsId[index] },
+                    raw: true,
+                });
+
+                delete dp.id;
+                const duplicate = await Program.create(dp);
+
+                const e = await Event.findAll({
+                    where: { programId: programsId[index] },
+                    raw: true,
+                    order: [['order', 'ASC']],
+                });
+
+                for (let i in e) {
+                    delete e[i].id;
+                    e[i].programId = duplicate.id;
+                    await Event.create(e[i]);
+                }
+
+                programsId[index] = duplicate.id;
+            }
+
             const updatedTemplate = await Program.update({
                 composeId: compose.id,
                 timeToSwap: timings[index],
@@ -238,6 +258,8 @@ class ComposeService
             if (updatedTemplate[0] === 0) {
                 throw new Error('Некорректный ID: ' + programsId);
             }
+
+            processedIds.push(programsId[index]);
         }
 
         return this.getOne({
@@ -267,21 +289,48 @@ class ComposeService
         const compose = await Compose.findOne({
             where: {
                 id: id,
-                authorName: user.name,
+                authorId: user.userId,
             },
         });
 
-        if (!compose.id && !byModer) {
+        if (!(compose instanceof Compose) && !byModer) {
             throw new Error('Попытка удалить не свою композицию.');
         }
 
-        if (!withPrograms) {
-            await Program.update({
-                timeToSwap: null,
-                composeId: null,
-            }, {
+        if (withPrograms) {
+            await Program.destroy({
                 where: {
-                    composeId: compose.id
+                    composeId: compose.id,
+                },
+            });
+        } else {
+            let duplicatesToDestroy = [];
+
+            const programs = await Program.findAll({
+                where: {
+                    composeId: compose.id,
+                },
+                attributes: ['id', 'name'],
+                order: [
+                    ['timeToSwap', 'ASC'],
+                ],
+            });
+
+            for (let i = 0; i < programs.length; i++) {
+                if (duplicatesToDestroy.includes(programs[i].id)) {
+                    continue;
+                }
+                for (let j = i + 1; j < programs.length; j++) {
+                    if ((programs[i].name === programs[j].name) && !(duplicatesToDestroy.includes(programs[j].id))) {
+                        duplicatesToDestroy.push(programs[j].id);
+                    }
+                }
+            }
+
+            await Program.destroy({
+                where: {
+                    id: duplicatesToDestroy,
+                    composeId: compose.id,
                 },
             });
         }
@@ -289,7 +338,7 @@ class ComposeService
         return Compose.destroy({
             where: {
                 id: id,
-                authorName: user.name,
+                authorId: user.userId,
             },
         });
     }
@@ -345,7 +394,6 @@ class ComposeService
                 id: id,
             },
         });
-
         await Program.update({
             composeId: null,
             timeToSwap: null,
@@ -356,7 +404,6 @@ class ComposeService
         });
 
         let timings = timingList;
-
         if (!compose.isSpecial) {
             timings = ['08:40:00', '10:15:00', '12:00:00'];
         }
@@ -377,15 +424,13 @@ class ComposeService
             }
 
             if (eventList[i] !== null) {
-                let data = {
+                await programService.updateOne({
                     user: user,
                     body: {
-                        programId: programs[i].id,
+                        id: programs[i].id,
                         events: eventList[i],
                     },
-                }
-
-                await programService.updateOne(data);
+                });
             }
         }
 

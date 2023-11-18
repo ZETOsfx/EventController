@@ -13,7 +13,7 @@ class FileStorageService
     /**
      * Получить информацию по загруженности хранилища
      *
-     * @return { occupiedSpace } Объем занятого ресурсами пространства на диске
+     * @return { status, data } Объем занятого ресурсами пространства на диске
      */
     getWorkload(req, res)
     {

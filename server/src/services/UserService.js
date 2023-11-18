@@ -68,8 +68,6 @@ class UserService
 
         const roleExists = await this.isRoleExists(role);
 
-        console.log(role);
-
         if (!(roleExists instanceof Role)) {
             throw new Error('Некорректный параметр: РОЛЬ');
         }

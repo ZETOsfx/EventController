@@ -3,6 +3,7 @@ const { Note, User, User_Note } = require('../../models');
 
 /**
  * Class NoteService
+ * Работа с уведомлениями в системе
  *
  * @package src/services
  */
@@ -158,9 +159,17 @@ class NoteService
     async deleteOne(params)
     {
         const { user } = params;
-        this.checkRole(user.role);
-
         const { id } = params.body;
+
+        const note = await Note.findOne({
+            where: {
+                id: id,
+            },
+        })
+
+        if (!(['admin', 'moderator', 'manager'].includes(user.role) || note.addressedTo === user.name)) {
+            throw new Error('Недостаточно прав доступа');
+        }
 
         return Note.destroy({
             where: {
@@ -176,7 +185,6 @@ class NoteService
      */
     checkRole(role)
     {
-        console.log(role);
         if (!['admin', 'moderator', 'manager'].includes(role)) {
             throw new Error('Недостаточно прав доступа');
         }

@@ -6,8 +6,8 @@ const fs = require('fs');
 const path = require('path');
 
 /**
- * Class FileService
- * Работа с файлами на сервере
+ * Class FileImageService
+ * Работа с файлами на сервере (изображения)
  *
  * @package src/services
  */
@@ -16,7 +16,7 @@ class FileImageService
     /**
      * Получить список всех файлов
      *
-     * @return {Array<Promise<File>>, fileStorageData}
+     * @return {Promise<File>}
      * Список всех файлов на сервере, информация по загрузке диска
      */
     async getAll()
@@ -31,7 +31,10 @@ class FileImageService
                 model: User,
                 attributes: ['name'],
             },
-            attributes: ['id', 'name', 'src', 'type', 'weight', 'expires', 'isUnlimited', 'format'],
+            attributes: ['id', 'name', 'src', 'type', 'weight', 'expires', 'isUnlimited', 'format', 'resolution'],
+            order: [
+                ['createdAt', 'DESC'],
+            ],
         });
     }
 
@@ -39,7 +42,7 @@ class FileImageService
      * Загрузить одно или более изображений в хранилище файлов
      *
      * @param params Входные POST параметры
-     * @return Array<Promise<File>> Загруженное (-ые) изображение (-я)
+     * @return {Promise<File>} Загруженное (-ые) изображение (-я)
      */
     async addList(params)
     {
@@ -50,6 +53,7 @@ class FileImageService
             throw new Error('Файлы отсутствуют');
         }
 
+        const resolution = params.body.resolution.split(',');
         for (let i in files) {
             let nameExt = files[i].originalname.split('.');
             let changedName = files[i].path.split('/').slice(-1);
@@ -60,7 +64,8 @@ class FileImageService
                 src: process.env.UPLOAD_PATH_IMAGINE + '/' + changedName,
                 type: files[i].fieldname,
                 weight: Math.round(files[i].size / (1024 * 1024) * 100) / 100 + ' МБ',
-                authorName: user.name,
+                resolution: resolution[i],
+                authorId: user.userId,
                 expires: "9999-01-01",
                 isUnlimited: true,
             });
@@ -73,7 +78,7 @@ class FileImageService
      * Внести изменения в параметры хранения файла
      * 
      * @param params Входные POST параметры
-     * @return number Результат операции 
+     * @return {Promise<File>} Результат операции
      */
     async updateOne(params)
     {
@@ -92,7 +97,7 @@ class FileImageService
             throw new Error('Менять чужие файлы может только администратор');
         }
 
-        return await File.update({
+        return File.update({
             isUnlimited: isUnlimited,
             expires: (isUnlimited) ? "9999-01-01" : expires,
         }, {

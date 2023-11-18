@@ -6,14 +6,9 @@ module.exports = (sequelize, DataTypes) =>
 {
     class File extends Model
     {
-        /**
-         * Helper method for defining associations.
-         * This method is not a part of Sequelize lifecycle.
-         * The `models/index` file will call this method automatically.
-         */
-        static associate(models)
+        static associate({ User })
         {
-            File.belongsTo(models.User, {
+            File.belongsTo(User, {
                 foreignKey: 'authorId',
                 targetKey: 'id',
                 as: 'author',
@@ -32,6 +27,7 @@ module.exports = (sequelize, DataTypes) =>
         src: DataTypes.TEXT,
         type: DataTypes.STRING(5),
         weight: DataTypes.STRING(10),
+        resolution: DataTypes.STRING(11),
         authorId: {
             field: 'author_id',
             type: DataTypes.STRING(16),
@@ -56,7 +52,7 @@ module.exports = (sequelize, DataTypes) =>
         sequelize,
         modelName: 'File',
         tableName: 'files',
-        timestamps: true,
+        timestamps: false,
         underscored: true,
     });
 

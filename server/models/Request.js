@@ -6,20 +6,13 @@ module.exports = (sequelize, DataTypes) =>
 {
     class Request extends Model
     {
-        /**
-         * Helper method for defining associations.
-         * This method is not a part of Sequelize lifecycle.
-         * The `models/index` file will call this method automatically.
-         */
-        static associate(models)
+        static associate({ Compose, User })
         {
-            // define association here
-            Request.belongsTo(models.Compose, {
+            Request.belongsTo(Compose, {
                 as: 'compose',
                 foreignKey: 'composeId',
             });
-
-            Request.belongsTo(models.User, {
+            Request.belongsTo(User, {
                 foreignKey: { name: 'approved', allowNull: true, },
                 targetKey: 'name',
             });

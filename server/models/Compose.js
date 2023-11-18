@@ -6,24 +6,17 @@ module.exports = (sequelize, DataTypes) =>
 {
     class Compose extends Model
     {
-        /**
-         * Helper method for defining associations.
-         * This method is not a part of Sequelize lifecycle.
-         * The `models/index` file will call this method automatically.
-         */
-        static associate(models)
+        static associate({ Program, Request, User })
         {
-            Compose.hasMany(models.Program, {
+            Compose.hasMany(Program, {
                 as: 'programs',
                 foreignKey: 'composeId',
             });
-
-            Compose.hasOne(models.Request, {
+            Compose.hasOne(Request, {
                 as: 'request',
                 foreignKey: 'composeId',
             });
-
-            Compose.belongsTo(models.User, {
+            Compose.belongsTo(User, {
                 foreignKey: 'authorId',
                 targetKey: 'id',
                 as: 'author',
@@ -58,7 +51,6 @@ module.exports = (sequelize, DataTypes) =>
             },
             allowNull: false,
         },
-        screen: DataTypes.INTEGER,
         status: {
             type: DataTypes.STRING(10),
             allowNull: false,

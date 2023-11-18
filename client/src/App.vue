@@ -1,219 +1,3 @@
-<template>
-    <link v-if="this.$route.name !== 'Broadcast'" rel="stylesheet" href="/css/style_new.css">
-    <link v-if="this.$route.name === 'Broadcast'" rel="stylesheet" href="/css/style.css">
-
-    <!-- Группировка toasts -->
-    <toast :time="currentTime" :successCb="successMessage" :errorCb="errorMessage" :infoCb="infoMessage"></toast>
-
-    <div class="modal fade" id="ErrorCompatibilityModal" data-bs-backdrop="static" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h1 class="modal-title fs-5" id="exampleModalToggleLabel" style="color:red">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                            class="bi bi-exclamation-triangle-fill" viewBox="0 0 16 16">
-                            <path
-                                d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z">
-                            </path>
-                        </svg>
-                        Ошибка совместимости
-                    </h1>
-                </div>
-                <div class="modal-body">
-                    <strong> Ваш браузер: {{ this.browserName }} версии {{ this.browserVersion }} не поддерживается.
-                    </strong>
-                    <p></p>
-                    Для корректной работы в системе необходимо использовать одну из следующих версий браузеров:
-                    <ul class="list-group">
-                        <li :class="'list-group-item ' + (this.browserName === 'Firefox' ? 'list-group-item-danger' : '')">
-                            Firefox 92 и выше </li>
-                        <li :class="'list-group-item ' + (this.browserName === 'Chrome' ? 'list-group-item-danger' : '')">
-                            Chrome 94 и выше </li>
-                        <li
-                            :class="'list-group-item ' + (this.browserName === 'Microsoft Edge' ? 'list-group-item-danger' : '')">
-                            Edge 94 и выше </li>
-                        <li :class="'list-group-item ' + (this.browserName === 'Opera' ? 'list-group-item-danger' : '')">
-                            Opera 80 и выше </li>
-                        <li
-                            :class="'list-group-item ' + (this.browserName === 'Yandex Browser' ? 'list-group-item-danger' : '')">
-                            Yandex 22 и выше </li>
-                        <li :class="'list-group-item ' + (this.browserName === 'Safari' ? 'list-group-item-danger' : '')">
-                            Safari 15 и выше </li>
-                    </ul>
-                </div>
-                <div class="modal-footer">
-                    <a v-if="this.browserName === 'Firefox'" href="https://www.mozilla.org/ru/firefox/new/"
-                        class="btn btn-success">Скачать актуальную версию Firefox</a>
-                    <a v-if="this.browserName === 'Chrome'" href="https://www.google.ru/intl/ru/chrome/"
-                        class="btn btn-success">Скачать актуальную версию Chrome</a>
-                    <a v-if="this.browserName === 'Edge'" href="https://www.microsoft.com/ru-ru/edge/download"
-                        class="btn btn-success">Скачать актуальную версию Edge</a>
-                    <a v-if="this.browserName === 'Opera'" href="https://www.opera.com/ru/browsers"
-                        class="btn btn-success">Скачать актуальную версию Opera</a>
-                    <a v-if="this.browserName === 'Safari'" href="https://support.apple.com/ru-ru/HT204416"
-                        class="btn btn-success">Обновить Safari</a>
-                    <a v-if="this.browserName === 'Yandex Browser'" href="https://browser.yandex.ru/"
-                        class="btn btn-success">Обновить Yandex Browser</a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <body>
-        <nav class="sidebar close" v-if="this.$route.name !== 'Broadcast' && this.$route.name !== 'Adscast'">
-            <header>
-                <div class="image-text">
-                    <span class="image">
-                        <img src="../public/favicon.ico" alt="" width="0" height="0">
-                    </span>
-                    <div class="text logo-text">
-                        <span v-if="this.session.loggedin && this.session.name" class="name ms-2"
-                            style="max-width: 185px;">{{ this.session.name }}</span>
-                        <span v-if="!this.session.loggedin || !this.session.name" class="name ms-2"
-                            style="max-width: 185px;"> EditorService </span>
-
-                        <span v-if="this.session.loggedin && this.session.name" class="profession ms-2"
-                            style="max-width: 185px;"> {{ this.getRole() }} </span>
-                        <span v-if="!this.session.loggedin || !this.session.name" class="profession ms-2"
-                            style="max-width: 185px; font-size: 13px;"> Система отображения </span>
-                    </div>
-                </div>
-                <i class='bx bx-chevron-right toggle'></i>
-            </header>
-
-            <div class="menua-bar">
-                <div class="menua">
-                    <li class="nav-linka">
-                        <router-link @click="closeTab('main')" class="position-relative" to="/index">
-                            <!-- <a href="/index" class="position-relative"> -->
-                            <i class='bx bx-home-alt icon'></i>
-                            <span class="text nav-text">Главная</span>
-                            <!-- </a> -->
-                        </router-link>
-                    </li>
-
-                    <li v-if="this.session.loggedin && ['admin', 'editor', 'moderator'].includes(this.session.role)"
-                        class="nav-linka">
-                        <router-link @click="closeTab('editor')" class="position-relative" to="/event">
-                            <i class='bx bx-edit-alt icon'></i>
-                            <span class="text nav-text">Редактор</span>
-                        </router-link>
-                    </li>
-
-                    <li class="nav-linka">
-                        <router-link @click="closeTab('note')" class="position-relative" to="/note">
-                            <i class='bx bx-bell icon'></i>
-                            <span v-if="this.session.noread > 0"
-                                class="position-absolute top-40 start-30 translate-middle badge rounded-pill bg-danger"
-                                style="margin-left:40px"> {{ this.session.noread }}
-                            </span>
-                            <span class="text nav-text">Уведомления</span>
-                        </router-link>
-                    </li>
-
-                    <li v-if="this.session.loggedin && ((this.session.role === 'admin') || (this.session.role === 'moderator'))"
-                        class="nav-linka">
-                        <router-link @click="closeTab('moderator')" class="position-relative" to="/moder">
-                            <i class='bx bx-calendar-check icon'></i>
-                            <span class="text nav-text">Модерация</span>
-                        </router-link>
-                    </li>
-
-                    <li v-if="this.session.loggedin && this.session.role === 'admin'" class="nav-linka">
-                        <router-link @click="closeTab('admin')" class="position-relative" to="/account">
-                            <i class='bx bx-wrench icon'></i>
-                            <span class="text nav-text">Управление</span>
-                        </router-link>
-                    </li>
-
-                    <li v-if="this.session.loggedin && ['admin', 'moderator', 'manager', 'editor'].includes(this.session.role)"
-                        class="nav-linka">
-                        <router-link @click="closeTab('remote')" class="position-relative" to="/remote">
-                            <i class='bx bx-tv icon'></i>
-                            <span class="text nav-text">Пульт</span>
-                        </router-link>
-                    </li>
-
-                    <li v-if="this.session.loggedin" class="nav-linka">
-                        <router-link @click="closeTab('files')" class="position-relative" to="/upload">
-                            <i class='bx bx-cloud-upload icon'></i>
-                            <span class="text nav-text">Ресурсы</span>
-                        </router-link>
-                    </li>
-
-
-                    <li class="nav-linka">
-                        <router-link @click="closeTab('tutor')" class="position-relative" to="/guide">
-                            <i class='bx bx-info-circle icon'></i>
-                            <span class="text nav-text">Инструкция</span>
-                        </router-link>
-                    </li>
-
-                    <!-- <li class="nav-linka">
-						<a href="http://rstring.mgul.ac.ru:40000/" class="position-relative">
-						<i class='bx bx-music icon'></i>
-						<span class="text nav-text">Заказ музыки</span>
-						</a>
-					</li>
-
-					<li class="nav-link">
-						<a href="http://rstring.mgul.ac.ru:3000/" class="position-relative">
-						<i class='bx bx-terminal icon'></i>
-						<span class="text nav-text">Бегущая строка</span>
-						</a>
-					</li> -->
-                </div>
-
-                <div class="bottom-content">
-                    <li v-if="this.session.loggedin" class="nav-linka">
-                        <router-link @click="closeTab('bugreport')" to="/bugreport" class="position-relative">
-                            <i class='bx bx-bug icon'></i>
-                            <span class="text nav-text">Баг репорт</span>
-                        </router-link>
-                    </li>
-
-                    <li class="nav-linka">
-                        <router-link @click="closeTab('cast')" to="/cast" class="position-relative">
-                            <i class='bx bx-cast icon'></i>
-                            <span class="text nav-text">Просмотр</span>
-                        </router-link>
-                    </li>
-
-                    <li class="">
-                        <router-link @click="onLogout()" v-if="this.session.loggedin && this.session.name"
-                            class="position-relative" to="/login">
-                            <i class='bx bx-log-out icon'></i>
-                            <span class="text nav-text">Выйти</span>
-                        </router-link>
-                        <router-link @click="closeTab()" v-if="!this.session.loggedin || !this.session.name"
-                            class="position-relative" to="/login">
-                            <i class='bx bx-log-in icon'></i>
-                            <span class="text nav-text">Войти</span>
-                        </router-link>
-                    </li>
-
-                    <li class="mode">
-                        <div class="sun-moon">
-                            <i class='bx bx-moon icon moon'></i>
-                            <i class='bx bx-sun icon sun'></i>
-                        </div>
-                        <span class="mode-text text"> Тёмная тема </span>
-
-                        <div class="toggle-switch">
-                            <span class="switch"></span>
-                        </div>
-                    </li>
-                </div>
-            </div>
-        </nav>
-
-        <router-view v-if="this.$route.name === 'Broadcast'" />
-        <section :class="getClass()" id="home" v-if="this.$route.name !== 'Broadcast'">
-            <router-view />
-        </section>
-    </body>
-</template>
-
 <script>
 import Bowser from "bowser";
 import io from "socket.io-client";
@@ -238,6 +22,7 @@ export default {
             options: (method, body) => this.options(method, body),
             toast: (type, msg) => this.toast(type, msg),
             clickBlock: (flag) => this.clickBlock(flag),
+            formNextFocus: (id) => this.formNextFocus(id),
         }
     },
     data()
@@ -260,8 +45,8 @@ export default {
             successMessage: '',
             errorMessage: '',
             infoMessage: '',
-            succCallback: {},
-            errCallback: {},
+            successCallback: {},
+            errorCallback: {},
             infoCallback: {},
 
             osName: {},
@@ -285,7 +70,7 @@ export default {
             {
                 if (this.page !== 'note') {
                     let user = localStorage.getItem('user');
-                    user.noread++;
+                    user.unread++;
                     localStorage.removeItem('user');
                     localStorage.setItem('user', user);
                 }
@@ -303,7 +88,7 @@ export default {
         },
 
         /**
-         * Конфигурация боковой панели 
+         * Конфигурация боковой панели
          */
         onLoad()
         {
@@ -392,8 +177,8 @@ export default {
          */
         configureModals()
         {
-            this.succCallback = new bootstrap.Toast(document.getElementById("ToastSuccess"));
-            this.errCallback = new bootstrap.Toast(document.getElementById("ToastError"));
+            this.successCallback = new bootstrap.Toast(document.getElementById("ToastSuccess"));
+            this.errorCallback = new bootstrap.Toast(document.getElementById("ToastError"));
             this.infoCallback = new bootstrap.Toast(document.getElementById("ToastInfo"));
         },
 
@@ -477,7 +262,7 @@ export default {
 
         /**
          * Клик по заблокированной форме
-         * 
+         *
          * @param blocked Флаг блокировки формы
          */
         async clickBlock(blocked)
@@ -490,7 +275,7 @@ export default {
 
         /**
          * Вывод сообщений пользователю в виде всплывающего окна
-         * 
+         *
          * @param type Тип сообщения [ 'error', 'success', 'info' ]
          * @param message Текст сообщения
          */
@@ -500,11 +285,11 @@ export default {
             switch (type) {
                 case 'success':
                     this.successMessage = message;
-                    this.succCallback.show();
+                    this.successCallback.show();
                     break;
                 case 'error':
                     this.errorMessage = message;
-                    this.errCallback.show();
+                    this.errorCallback.show();
                     break;
                 case 'info':
                 default:
@@ -514,8 +299,8 @@ export default {
         },
 
         /**
-         * Обертка для установки параметров при отправке запроса 
-         * 
+         * Обертка для установки параметров при отправке запроса
+         *
          * @param {*} method Метод запроса
          * @param {*} body Тело запроса
          */
@@ -555,6 +340,13 @@ export default {
 
             this.currentTime = hour + ':' + min + ':' + sec;
         },
+        formNextFocus(id)
+        {
+            this.$nextTick(() =>
+            {
+                document.getElementById(id).focus({ focusVisible: true });
+            });
+        },
     },
 
     mounted()
@@ -578,3 +370,166 @@ export default {
     }
 }
 </script>
+
+<template>
+    <link v-if="this.$route.name !== 'Broadcast'" rel="stylesheet" href="/css/style_new.css">
+    <link v-if="this.$route.name === 'Broadcast'" rel="stylesheet" href="/css/style.css">
+
+    <!-- Группировка toasts -->
+    <toast :time="currentTime" :successCb="successMessage" :errorCb="errorMessage" :infoCb="infoMessage"></toast>
+
+    <div class="modal fade" id="ErrorCompatibilityModal" data-bs-backdrop="static" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5" id="exampleModalToggleLabel" style="color:red">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                            class="bi bi-exclamation-triangle-fill" viewBox="0 0 16 16">
+                            <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+                        </svg>
+                        Ошибка совместимости
+                    </h1>
+                </div>
+                <div class="modal-body">
+                    <strong> Ваш браузер: {{ this.browserName }} версии {{ this.browserVersion }} не поддерживается.
+                    </strong>
+                    <p></p>
+                    Для корректной работы в системе необходимо использовать одну из следующих версий браузеров:
+                    <ul class="list-group">
+                        <li :class="'list-group-item ' + (this.browserName === 'Firefox' ? 'list-group-item-danger' : '')"> Firefox 92 и выше </li>
+                        <li :class="'list-group-item ' + (this.browserName === 'Chrome' ? 'list-group-item-danger' : '')"> Chrome 94 и выше </li>
+                        <li :class="'list-group-item ' + (this.browserName === 'Microsoft Edge' ? 'list-group-item-danger' : '')"> Edge 94 и выше </li>
+                        <li :class="'list-group-item ' + (this.browserName === 'Opera' ? 'list-group-item-danger' : '')">Opera 80 и выше </li>
+                        <li :class="'list-group-item ' + (this.browserName === 'Yandex Browser' ? 'list-group-item-danger' : '')"> Yandex 22 и выше </li>
+                        <li :class="'list-group-item ' + (this.browserName === 'Safari' ? 'list-group-item-danger' : '')"> Safari 15 и выше </li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <a v-if="this.browserName === 'Firefox'" href="https://www.mozilla.org/ru/firefox/new/" class="btn btn-success">Скачать актуальную версию Firefox</a>
+                    <a v-if="this.browserName === 'Chrome'" href="https://www.google.ru/intl/ru/chrome/" class="btn btn-success">Скачать актуальную версию Chrome</a>
+                    <a v-if="this.browserName === 'Edge'" href="https://www.microsoft.com/ru-ru/edge/download" class="btn btn-success">Скачать актуальную версию Edge</a>
+                    <a v-if="this.browserName === 'Opera'" href="https://www.opera.com/ru/browsers" class="btn btn-success">Скачать актуальную версию Opera</a>
+                    <a v-if="this.browserName === 'Safari'" href="https://support.apple.com/ru-ru/HT204416" class="btn btn-success">Обновить Safari</a>
+                    <a v-if="this.browserName === 'Yandex Browser'" href="https://browser.yandex.ru/" class="btn btn-success">Обновить Yandex Browser</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <body>
+        <nav class="sidebar close" v-if="this.$route.name !== 'Broadcast' && this.$route.name !== 'Adscast'">
+            <header>
+                <div class="image-text">
+                    <span class="image">
+                        <img src="../public/favicon.ico" alt="" width="0" height="0">
+                    </span>
+                    <div class="text logo-text">
+                        <span v-if="this.session.loggedin && this.session.name" class="name ms-2" style="max-width: 185px;">{{ this.session.name }}</span>
+                        <span v-if="!this.session.loggedin || !this.session.name" class="name ms-2" style="max-width: 185px;"> EventController </span>
+                        <span v-if="this.session.loggedin && this.session.name" class="profession ms-2" style="max-width: 185px;"> {{ this.getRole() }} </span>
+                        <span v-if="!this.session.loggedin || !this.session.name" class="profession ms-2" style="max-width: 185px; font-size: 13px;"> Система отображения </span>
+                    </div>
+                </div>
+                <i class='bx bx-chevron-right toggle'></i>
+            </header>
+            <div class="menua-bar">
+                <div class="menua">
+                    <li class="nav-linka">
+                        <router-link @click="closeTab('main')" class="position-relative" to="/index">
+                            <!-- <a href="/index" class="position-relative"> -->
+                            <i class='bx bx-home-alt icon'></i>
+                            <span class="text nav-text"> Главная </span>
+                            <!-- </a> -->
+                        </router-link>
+                    </li>
+                    <li v-if="this.session.loggedin && ['admin', 'editor', 'moderator'].includes(this.session.role)" class="nav-linka">
+                        <router-link @click="closeTab('editor')" class="position-relative" to="/event">
+                            <i class='bx bx-edit-alt icon'></i>
+                            <span class="text nav-text"> Редактор </span>
+                        </router-link>
+                    </li>
+                    <li class="nav-linka">
+                        <router-link @click="closeTab('note')" class="position-relative" to="/note">
+                            <i class='bx bx-bell icon'></i>
+                            <span v-if="this.session.unread > 0"
+                                class="position-absolute top-40 start-30 translate-middle badge rounded-pill bg-danger"
+                                style="margin-left:40px"> {{ this.session.unread }}
+                            </span>
+                            <span class="text nav-text"> Уведомления </span>
+                        </router-link>
+                    </li>
+                    <li v-if="this.session.loggedin && ((this.session.role === 'admin') || (this.session.role === 'moderator'))" class="nav-linka">
+                        <router-link @click="closeTab('moderator')" class="position-relative" to="/moder">
+                            <i class='bx bx-calendar-check icon'></i>
+                            <span class="text nav-text"> Модерация </span>
+                        </router-link>
+                    </li>
+                    <li v-if="this.session.loggedin && this.session.role === 'admin'" class="nav-linka">
+                        <router-link @click="closeTab('admin')" class="position-relative" to="/account">
+                            <i class='bx bx-wrench icon'></i>
+                            <span class="text nav-text"> Управление </span>
+                        </router-link>
+                    </li>
+                    <li v-if="this.session.loggedin && ['admin', 'moderator', 'manager', 'editor'].includes(this.session.role)" class="nav-linka">
+                        <router-link @click="closeTab('remote')" class="position-relative" to="/remote">
+                            <i class='bx bx-tv icon'></i>
+                            <span class="text nav-text"> Пульт </span>
+                        </router-link>
+                    </li>
+                    <li v-if="this.session.loggedin" class="nav-linka">
+                        <router-link @click="closeTab('files')" class="position-relative" to="/upload">
+                            <i class='bx bx-cloud-upload icon'></i>
+                            <span class="text nav-text"> Ресурсы </span>
+                        </router-link>
+                    </li>
+                    <li class="nav-linka">
+                        <router-link @click="closeTab('tutor')" class="position-relative" to="/guide">
+                            <i class='bx bx-info-circle icon'></i>
+                            <span class="text nav-text"> Инструкция </span>
+                        </router-link>
+                    </li>
+                </div>
+                <div class="bottom-content">
+                    <li v-if="this.session.loggedin" class="nav-linka">
+                        <router-link @click="closeTab('bugreport')" to="/bugreport" class="position-relative">
+                            <i class='bx bx-bug icon'></i>
+                            <span class="text nav-text">Баг репорт</span>
+                        </router-link>
+                    </li>
+                    <li class="nav-linka">
+                        <router-link @click="closeTab('cast')" to="/cast" class="position-relative">
+                            <i class='bx bx-cast icon'></i>
+                            <span class="text nav-text">Просмотр</span>
+                        </router-link>
+                    </li>
+                    <li class="">
+                        <router-link @click="onLogout()" v-if="this.session.loggedin && this.session.name"
+                            class="position-relative" to="/login">
+                            <i class='bx bx-log-out icon'></i>
+                            <span class="text nav-text">Выйти</span>
+                        </router-link>
+                        <router-link @click="closeTab()" v-if="!this.session.loggedin || !this.session.name"
+                            class="position-relative" to="/login">
+                            <i class='bx bx-log-in icon'></i>
+                            <span class="text nav-text">Войти</span>
+                        </router-link>
+                    </li>
+                    <li class="mode">
+                        <div class="sun-moon">
+                            <i class='bx bx-moon icon moon'></i>
+                            <i class='bx bx-sun icon sun'></i>
+                        </div>
+                        <span class="mode-text text"> Тёмная тема </span>
+                        <div class="toggle-switch">
+                            <span class="switch"></span>
+                        </div>
+                    </li>
+                </div>
+            </div>
+        </nav>
+
+        <router-view v-if="this.$route.name === 'Broadcast'" />
+        <section :class="getClass()" id="home" v-if="this.$route.name !== 'Broadcast'">
+            <router-view />
+        </section>
+    </body>
+</template>

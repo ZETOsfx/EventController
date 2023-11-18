@@ -18,35 +18,29 @@ module.exports = (sequelize, DataTypes) =>
                 targetKey: 'id',
                 as: 'role',
             });
-
             User.belongsToMany(Subscribe, {
                 through: 'User_Subscribe',
                 as: 'subscribes',
             });
-
             User.belongsToMany(Note, {
                 through: 'User_Note',
                 as: 'reads',
             });
-
             User.hasMany(Note, {
                 sourceKey: 'id',
                 foreignKey: 'authorId',
                 as: 'notes',
             });
-
             User.hasMany(Compose, {
                 sourceKey: 'id',
                 foreignKey: 'authorId',
                 as: 'composes',
             });
-
             User.hasMany(Program, {
                 sourceKey: 'id',
                 foreignKey: 'authorId',
                 as: 'programs',
             });
-
             User.hasMany(File, {
                 sourceKey: 'id',
                 foreignKey: 'authorId',

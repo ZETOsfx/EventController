@@ -1,22 +1,3 @@
-<template>
-    <div v-if="isInit" class="background">
-        <div class="layer-text">
-            Loading... [{{ activeItemId }}/{{ calcTypeFrom() }}]
-        </div>
-        <div class="layer">
-        </div>
-    </div>
-    <template v-for="page in pages.image">
-        <customImage v-show="page.id === activeItemId" :src="page.src" />
-    </template>
-    <template v-for="page in pages.video">
-        <customVideo :id="page.id" v-show="page.id === activeItemId" :src="page.src"></customVideo>
-    </template>
-    <template v-for="page in pages.form">
-        <customIframe :itemId="page.id" :load="formLoad" v-show="page.id === activeItemId" :src="page.src"></customIframe>
-    </template>
-</template>
-
 <script>
 import customImage from "../components/image.vue";
 import customVideo from "../components/video.vue";
@@ -37,7 +18,7 @@ export default {
             pages: {
                 image: [{ id: null, src: null }],
                 video: [{ id: null, src: null }],
-                form: [{ id: null, src: null }],
+                webform: [{ id: null, src: null }],
                 end: [{ id: null, src: null }]
             },
             activeItemId: -1,
@@ -48,11 +29,11 @@ export default {
     methods: {
         connect()
         {
-            this.socket().on('active:upd', async (data) =>
-            {
-                console.log('Update signal:' + data.for);
-                window.location.reload();
-            });
+            // this.socket().on('active:upd', async (data) =>
+            // {
+            //     console.log('Update signal:' + data.for);
+            //     window.location.reload();
+            // });
         },
 
         async getData()
@@ -67,15 +48,21 @@ export default {
             });
             response = await response.json();
 
-            if (response.status === 'success') {
-                this.list = response.data;
-            } else {
+            if (response.status !== 'success') {
                 this.toast('error', 'Что-то пошло не так :(');
             }
+            this.list = response.data;
         },
 
         async buildPages()
         {
+            this.pages = {
+                image: [{ id: null, src: null }],
+                video: [{ id: null, src: null }],
+                webform: [{ id: null, src: null }],
+                end: [{ id: null, src: null }],
+            }
+
             for (let i in this.list) {
                 let obj = this.list[i];
                 obj.id = parseInt(i);
@@ -85,7 +72,7 @@ export default {
                 }
 
                 this.pages[obj.type].push(obj);
-                if (obj.type === "form" && this.isInit) {
+                if (obj.type === "webform" && this.isInit) {
                     this.activeItemId = obj.id;
                     await this.checkLoad(this.activeItemId)
                 }
@@ -100,7 +87,7 @@ export default {
             for (let k in this.list) {
                 let time = (new Date(this.list[k].time)).getTime()
                 if (this.now > time) continue;
-                if (k != 0) {
+                if (k !== 0) {
                     return this.list[parseInt(k) - 1].id;
                 } else {
                     return this.activeItemId;
@@ -122,7 +109,7 @@ export default {
             let z = 0;
             for (let i in this.list) {
                 let obj = this.list[i];
-                if (obj.type === "form") {
+                if (obj.type === "webform") {
                     z++;
                 }
             }
@@ -168,3 +155,22 @@ export default {
     }
 }
 </script>
+
+<template>
+    <div v-if="isInit" class="background">
+        <div class="layer-text">
+            Loading... [{{ activeItemId }}/{{ calcTypeFrom() }}]
+        </div>
+        <div class="layer">
+        </div>
+    </div>
+    <template v-for="page in pages.image">
+        <customImage v-show="page.id === activeItemId" :src="page.src" />
+    </template>
+    <template v-for="page in pages.video">
+        <customVideo :id="page.id" v-show="page.id === activeItemId" :src="page.src" />
+    </template>
+    <template v-for="page in pages.webform">
+        <customIframe :itemId="page.id" :load="formLoad" v-show="page.id === activeItemId" :src="page.src" />
+    </template>
+</template>

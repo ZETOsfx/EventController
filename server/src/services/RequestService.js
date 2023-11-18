@@ -1,7 +1,7 @@
-const { Sequelize } = require("sequelize");
-const { Event, Program, Compose, Request, Note } = require('../../models');
+const { Event, Program, Compose, Request, User } = require('../../models');
 
 const composeService = require('./ComposeService');
+const messageService = require('./MessageService');
 
 /**
  * Class RequestService
@@ -27,19 +27,76 @@ class RequestService
             include: {
                 as: 'compose',
                 model: Compose,
-                include: {
-                    as: 'programs',
-                    model: Program,
-                    include: {
-                        as: 'events',
-                        model: Event,
-                        attributes: ['id', 'name', 'src', 'type', 'time', 'order'],
+                include: [
+                    {
+                        as: 'programs',
+                        model: Program,
+                        include: {
+                            as: 'events',
+                            model: Event,
+                            attributes: ['id', 'name', 'src', 'type', 'time', 'order'],
+                        },
+                        attributes: ['id', 'name', 'timeToSwap'],
                     },
-                    attributes: ['id', 'name', 'timeToSwap'],
-                },
-                attributes: ['id', 'name', 'comment', 'date', 'isSpecial', 'authorName', 'screen', 'status', 'message'],
+                    {
+                        as: 'author',
+                        model: User,
+                        attributes: ['name'],
+                    },
+                ],
+                attributes: ['id', 'name', 'comment', 'date', 'isSpecial', 'status', 'message'],
             },
             attributes: ['id', 'isAccepted', 'approved', 'changer', 'isActive', 'inProcessing'],
+            order: [
+                [
+                    { model: Compose, as: 'compose' },
+                    { model: Program, as: 'programs' },
+                    'timeToSwap', 'ASC'
+                ],
+                [
+                    { model: Compose, as: 'compose' },
+                    { model: Program, as: 'programs' },
+                    { model: Event, as: 'events' },
+                    'order', 'ASC'
+                ],
+            ],
+        });
+    }
+
+    /**
+     * Получить данные запроса с указанным ID в установленной форме
+     * @param id ID запроса, данные которого необходимо получить
+     * @returns {Promise<Model>} Данные запроса в базе
+     */
+    async getOne(id) {
+        return Request.findOne({
+            where: {
+                id: id,
+            },
+            nest: true,
+            include: {
+                as: 'compose',
+                model: Compose,
+                include: [
+                    {
+                        as: 'programs',
+                        model: Program,
+                        include: {
+                            as: 'events',
+                            model: Event,
+                            attributes: ['id', 'name', 'src', 'type', 'time', 'order'],
+                        },
+                        attributes: ['id', 'name', 'timeToSwap'],
+                    },
+                    {
+                        as: 'author',
+                        model: User,
+                        attributes: ['name'],
+                    },
+                ],
+                attributes: ['id', 'name', 'comment', 'date', 'isSpecial', 'status', 'message'],
+            },
+            attributes: ['id', 'composeId', 'isAccepted', 'approved', 'changer', 'isActive', 'inProcessing'],
             order: [
                 [
                     { model: Compose, as: 'compose' },
@@ -63,7 +120,7 @@ class RequestService
      * - date : Дата, на которую планируется установить данную композицию
      *
      * @param params Входные POST параметры
-     * @return Сообщение об успешной отправке
+     * @return number Флаг успешной отправки
      */
     async addOne(params)
     {
@@ -73,62 +130,96 @@ class RequestService
             throw new Error('Недостаточно прав доступа');
         }
 
-        const { id, date } = params?.body;
+        const { id, name, description, date } = params?.body;
 
         if (!name) {
             throw new Error('Нельзя отправить программу с пустым именем');
         }
-
         if (!date) {
             throw new Error('Нельзя отправить программу без указания даты установки');
         }
 
-        const compose = await Compose.findOne({
+        const req = await Request.findOne({
             where: {
-                id: id,
+                composeId: id,
             },
         });
 
-        if (!compose instanceof Compose) {
+        if (req instanceof Request) {
+            throw new Error('Данная композиция уже находится в модерации');
+        }
+
+        const compose = await Compose.update({
+            name: name,
+            comment: description,
+            date: date,
+            status: 'sent',
+        }, {
+            where: {
+                id: id,
+                authorId: user.userId,
+            },
+        });
+
+        if (compose[0] === 0) {
             throw new Error('Некорректный ID композиции');
         }
 
-        if (compose.authorName !== user.name) {
-            throw new Error('Только автор может отправить данную программу на модерацию.');
-        }
-
-        const req = await Request.findOne({
-            where: {
-                composeId: compose.id,
-            },
-        });
-
-        if (req.id) {
-            throw new Error('Данная композиция уже была отправлена в модерацию.');
-        }
-
         await Request.create({
-            composeId: compose.id,
+            composeId: id,
             isAccepted: false,
             approved: null,
             isActive: false,
             inProcessing: false,
         });
 
-        const currentDate = new Date();
-        currentDate.setDate(currentDate.getDate() + 3);
-        const expires = currentDate.toISOString().split('T')[0];
-
-        await Note.create({
-            name: 'Запрос отправлен',
-            comment: 'Вы успешно отправили запрос на модерацию.',
-            expires: expires,
-            authorName: 'System',
-            onBroadcast: false,
-            addressedTo: user.name,
+        const systemUser = await User.findOne({
+            where: {
+                name: 'System',
+            },
+            attributes: ['id'],
         });
 
-        return 'Шаблон успешно отправлен на модерацию.';
+        await messageService.sendMessage({
+            header: 'Запрос отправлен',
+            description: 'Вы успешно отправили запрос на модерацию',
+            authorId: systemUser.id,
+            actualCntDays: 3,
+            addressedToName: user.name,
+        });
+
+        return 1;
+    }
+
+    /**
+     * Отозвать
+     * @param params Входные POST-параметры
+     * @returns {Promise<void>}
+     */
+    async recall(params)
+    {
+        const { user } = params;
+
+        if (!['admin', 'moderator', 'editor'].includes(user.role)) {
+            throw new Error('Недостаточно прав доступа');
+        }
+
+        const { id } = params?.body;
+
+        await Request.destroy({
+            where: {
+                composeId: id,
+            },
+        });
+
+        return Compose.update({
+            status: 'created',
+            message: null,
+        }, {
+            where: {
+                id: id,
+            },
+        })[0];
     }
 
     /**
@@ -142,7 +233,7 @@ class RequestService
      *   ] : Мутация (утверждение / отклонение / изменение)
      *
      * @param params Входные POST параметры
-     * @return number Обновленный запрос / флаг обновленного статуса
+     * @return Promise
      */
     async updateOne(params)
     {
@@ -151,18 +242,42 @@ class RequestService
 
         const { id, operation } = params?.body;
 
-        if (operation['rejected']) {
-            const composeId = (await Request.findOne({
-                where: {
-                    id: id,
+        const request = await Request.findOne({
+            nest: true,
+            where: {
+                id: id,
+            },
+            include: {
+                as: 'compose',
+                model: Compose,
+                include: {
+                    as: 'author',
+                    model: User,
+                    attributes: ['id', 'name'],
                 },
-                attributes: ['composeId'],
-            })).composeId;
+            },
+        });
 
+        if (operation['rejected']) {
             await Request.destroy({
                 where: {
                     id: id,
                 },
+            });
+
+            const systemUser = await User.findOne({
+                where: {
+                    name: 'System',
+                },
+                attributes: ['id'],
+            });
+
+            await messageService.sendMessage({
+                header: 'Запрос ' + request.compose.name + ' отклонен',
+                description: 'Комментарий модератора: ' + operation['rejected'],
+                authorId: systemUser.id,
+                actualCntDays: 3,
+                addressedToName: request.compose.author.name,
             });
 
             return Compose.update({
@@ -170,25 +285,25 @@ class RequestService
                 message: operation['rejected'],
             }, {
                 where: {
-                    id: composeId,
+                    id: request.compose.id,
                 },
             })[0];
-
-        } else {
-
+        }
+        else {
             if (operation['changed']) {
-                // Обновление композиции, программ
-
-            }
-
-            if (operation['approved']) {
-                const composeId = (await Request.findOne({
-                    where: {
-                        id: id,
+                const { forDate, programs, eventList, timingList } = operation['changed'];
+                composeService.updateOne({
+                    user: user,
+                    body: {
+                        id: request.composeId,
+                        forDate,
+                        programs,
+                        eventList,
+                        timingList,
                     },
-                    attributes: ['composeId'],
-                })).composeId;
-
+                });
+            }
+            if (operation['approved']) {
                 await Request.update({
                     isAccepted: true,
                     approved: user.name,
@@ -199,17 +314,30 @@ class RequestService
                     },
                 });
 
-                await Compose.update({
+                const systemUser = await User.findOne({
+                    where: {
+                        name: 'System',
+                    },
+                    attributes: ['id'],
+                });
+
+                await messageService.sendMessage({
+                    header: 'Запрос ' + request.compose.name + ' утвержден',
+                    description: 'Комментарий модератора: ' + operation['approved'],
+                    authorId: systemUser.id,
+                    actualCntDays: 3,
+                    addressedToName: request.compose.author.name,
+                });
+
+                return Compose.update({
                     status: 'approved',
                     message: operation['approved'],
                 }, {
                     where: {
-                        id: composeId,
+                        id: request.compose.id,
                     },
-                });
+                })[0];
             }
-
-            return 1;
         }
     }
 
@@ -232,97 +360,108 @@ class RequestService
 
         const { id, action } = params?.body;
 
-        const newRequest = await Request.findOne({
-            where: {
-                id: id,
-            },
+        const newRequest = await this.getOne(id);
+        const oldRequest = await Request.findOne({
             nest: true,
+            where: {
+                isActive: true,
+            },
             include: {
                 as: 'compose',
                 model: Compose,
                 include: {
-                    as: 'programs',
-                    model: Program,
+                    as: 'author',
+                    model: User,
+                    attributes: ['name'],
                 },
-            },
-            order: [
-                [
-                    { model: Compose, as: 'compose' },
-                    { model: Program, as: 'programs' },
-                    'timeToSwap', 'ASC'
-                ],
-            ],
-        });
-
-        const oldRequest = await Request.findOne({
-            where: {
-                isActive: true,
+                attributes: ['name'],
             },
         });
 
-        if (!newRequest.id) {
-            throw new Error('Некорректный ID');
+        if (!(newRequest instanceof Request)) {
+            throw new Error('Некорректный запрос');
         }
 
-        switch (action.type) {
-            case 'delete':
-                await composeService.deleteOne({
-                    user: user,
-                    body: {
-                        id: oldRequest.composeId,
-                        withPrograms: true,
-                        byModer: true,
-                    },
-                });
-                break;
-            case 'queue':
-                const targetDate = action.with;
+        if (oldRequest instanceof Request) {
+            switch (action.type) {
+                case 'delete':
+                    await composeService.deleteOne({
+                        user: user,
+                        body: {
+                            id: oldRequest.composeId,
+                            withPrograms: true,
+                            byModer: true,
+                        },
+                    });
+                    break;
+                case 'queue':
+                    const targetDate = action.with;
 
-                await Request.update({
-                    isActive: false,
-                }, {
-                    where: {
-                        isActive: true,
-                    },
-                });
+                    await Request.update({
+                        isActive: false,
+                    }, {
+                        where: {
+                            isActive: true,
+                        },
+                    });
+                    await Compose.update({
+                        date: targetDate,
+                        status: 'approved',
+                    }, {
+                        where: {
+                            id: oldRequest.composeId,
+                        },
+                    });
+                    await Program.update({
+                        isActive: false,
+                    }, {
+                        where: {
+                            isActive: true,
+                        },
+                    });
+                    break;
+                case 'return':
+                    const message = action.with;
 
-                await Compose.update({
-                    date: targetDate,
-                }, {
-                    where: {
-                        id: oldRequest.composeId,
-                    },
-                });
+                    await Compose.update({
+                        status: 'returned',
+                        message: message,
+                    }, {
+                        where: {
+                            id: oldRequest.composeId,
+                        },
+                    });
+                    await Program.update({
+                        isActive: false,
+                    }, {
+                        where: {
+                            isActive: true,
+                        },
+                    });
 
-                await Program.update({
-                    isActive: false,
-                }, {
-                    where: {
-                        composeId: oldRequest.composeId,
-                        isActive: true,
-                    },
-                });
-                break;
-            case 'return':
-                const message = action.with;
+                    const systemUser = await User.findOne({
+                        where: {
+                            name: 'System',
+                        },
+                        attributes: ['id'],
+                    });
+                    await messageService.sendMessage({
+                        header: 'Композиция ' + oldRequest.compose.name + ' возвращена после трансляции',
+                        description: 'Комментарий модератора: ' + action.with,
+                        authorId: systemUser.id,
+                        actualCntDays: 3,
+                        addressedToName: oldRequest.compose.author.name,
+                    });
 
-                await Compose.update({
-                    status: 'returned',
-                    message: message,
-                }, {
-                    where: {
-                        id: oldRequest.composeId,
-                    },
-                });
-
-                await Request.destroy({
-                    where: {
-                        id: oldRequest.id,
-                    },
-                });
-                break;
-            default:
-                throw new Error('Некорректный запрос: действие не определено')
+                    await Request.destroy({
+                        where: {
+                            id: oldRequest.id,
+                        },
+                    });
+                    break;
+                default:
+                    throw new Error('Некорректный запрос: действие не определено')
+            }
         }
 
         await Request.update({
@@ -332,7 +471,6 @@ class RequestService
                 id: newRequest.id,
             },
         });
-
         await Compose.update({
             status: 'active',
         }, {
@@ -343,11 +481,13 @@ class RequestService
 
         const between = (time, left, right) =>
         {
-            return [time, left, right].sort()[1] === time;
+            return ([time, left, right].sort()[1] === time) || (time === left);
         }
 
         let date = new Date();
-        let time = date.getHours() + ':' + date.getMinutes();
+        let hh = date.getHours();
+        let mm = date.getMinutes();
+        let time = (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm + ':00';
 
         if (!newRequest.compose.isSpecial) {
             const state = [
@@ -374,73 +514,42 @@ class RequestService
                     break;
                 }
             }
-
             await Program.update({
                 isActive: true,
             }, {
                 where: {
-                    id: newRequest.compose.programs[origin.indexOf(currentState)],
+                    id: newRequest.compose.programs[origin.indexOf(currentState)].id,
                 },
             });
-
-        } else {
-
-            let index = -1;
-
-            for (let i in newRequest.compose.programs) {
-                if (i < newRequest.compose.programs.length - 1) {
-                    if (between(time, newRequest.compose.programs[i], newRequest.compose.programs[i + 1])) {
-                        index = i;
-                        break;
-                    }
+        }
+        else {
+            let idActive = -1;
+            for (let i = 0; i < newRequest.compose.programs.length - 1; i++) {
+                if (between(time, newRequest.compose.programs[i].timeToSwap, newRequest.compose.programs[i + 1].timeToSwap)) {
+                    idActive = newRequest.compose.programs[i].id;
                 }
-                index = i;
+            }
+            if (idActive === -1) {
+                const lastProgram = newRequest.compose.programs.pop();
+                const date1 = new Date('2023-11-11T' + time + 'Z');
+                const date2 = new Date('2023-11-11T' + lastProgram.timeToSwap + 'Z');
+
+                if (date1 > date2) {
+                    idActive = lastProgram.id;
+                } else {
+                    idActive = newRequest.compose.programs[0].id;
+                }
             }
 
             await Program.update({
                 isActive: true,
             }, {
                 where: {
-                    id: newRequest.compose.programs[index],
+                    id: idActive,
                 },
             });
         }
-
-        return Request.findOne({
-            nest: true,
-            where: {
-                id: id,
-            },
-            include: {
-                as: 'compose',
-                model: Compose,
-                include: {
-                    as: 'programs',
-                    model: Program,
-                    include: {
-                        as: 'events',
-                        model: Event,
-                        attributes: ['id', 'name', 'src', 'type', 'time', 'order'],
-                    },
-                    attributes: ['id', 'name', 'timeToSwap'],
-                },
-                attributes: ['id', 'name', 'comment', 'date', 'isSpecial', 'authorName', 'screen', 'status', 'message'],
-            },
-            attributes: ['id', 'isAccepted', 'approved', 'changer', 'isActive', 'inProcessing'],
-            order: [
-                [
-                    { model: Compose, as: 'compose' },
-                    { model: Program, as: 'programs' },
-                    'timeToSwap', 'ASC'
-                ],
-                [
-                    { model: Compose, as: 'compose' },
-                    { model: Program, as: 'programs' },
-                    { model: Event, as: 'events' },
-                    'order', 'ASC'
-                ],
-            ],
-        });
+        return this.getOne(id);
     }
 
     /**
@@ -467,7 +576,7 @@ class RequestService
                     include: {
                         as: 'events',
                         model: Event,
-                        attributes: ['src', 'type'],
+                        attributes: ['src', 'type', 'time'],
                     },
                     attributes: ['id', 'name'],
                 },
@@ -484,13 +593,13 @@ class RequestService
             ],
         });
 
-        let events = [];
+        if (!(request instanceof Request)) {
+            throw new Error('Трансляция пуста');
+        }
+
+        let events = request.compose.programs[0].events;
         let eventsJson = [];
         let datetimeOrder = (new Date()).getTime();
-
-        if (request instanceof Request) {
-            request.compose.programs[0].events;
-        }
 
         for (let i in events) {
             eventsJson.push({
@@ -504,7 +613,7 @@ class RequestService
         eventsJson.push({
             time: new Date(datetimeOrder),
             type: "end",
-            src: "src"
+            src: "src",
         });
 
         return eventsJson;
@@ -521,11 +630,27 @@ class RequestService
         const { user } = params;
         this.checkRole(user.role);
 
-        const { id } = params.body;
+        const { id, inProcessing } = params.body;
 
-        return await Request.update({
-            inProcessing: Sequelize.literal('NOT inProcessing'),
-            changer: user.name,
+        const request = await Request.findOne({
+            nest: true,
+            where: {
+                id: id,
+            },
+            attributes: ['composeId', 'isActive', 'isAccepted'],
+        });
+
+        await Compose.update({
+            status: inProcessing ? 'processing' : (request.isActive ? 'active' : (request.isAccepted ? 'approved' : 'sent')),
+        }, {
+            where: {
+                id: request.composeId,
+            },
+        });
+
+        return Request.update({
+            inProcessing: inProcessing,
+            changer: inProcessing ? user.name : null,
         }, {
             where: {
                 id: id,
@@ -537,22 +662,32 @@ class RequestService
      * Завершение обработки для пользователя
      *
      * @param params Входные POST параметры
-     * @returns number Статус операции
+     * @returns {Promise<String>} Статус операции
      */
     async endProcess(params)
     {
         const { user } = params;
         this.checkRole(user.role);
 
-        return Request.update({
-            inProcessing: false,
-            changer: null,
-        }, {
+        const request = await Request.findOne({
             where: {
                 inProcessing: true,
                 changer: user.name,
             },
+            attributes: ['id'],
         });
+
+        if (!(request instanceof Request)) {
+            return null;
+        }
+
+        return this.toggleProcess({
+            user: user,
+            body: {
+                id: request.id,
+                inProcessing: false,
+            },
+        })
     }
 
     /**
@@ -567,6 +702,23 @@ class RequestService
         }
     }
 
+    /**
+     * Проверка наличия утвержденного запроса на указанную дату для указанного экрана
+     * @param screen Экран
+     * @param date Дата
+     * @returns boolean Флаг наличия
+     */
+    async hasRequestOnDate(screen, date)
+    {
+        const request = await Request.findAll({
+            where: {
+                screen: screen,
+                date: date,
+                isAccepted: true,
+            },
+        });
+        return (request[0] instanceof Request);
+    }
 }
 
 module.exports = new RequestService();

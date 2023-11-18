@@ -1,9 +1,8 @@
-const { Op } = require("sequelize");
 const { Event, Program, User } = require('../../models');
 
 /**
  * Class ProgramService
- * Работа с аккаунтами пользователей
+ * Работа с программами трансляции
  *
  * @package src/services
  */
@@ -62,18 +61,24 @@ class ProgramService
         const { user } = params;
         this.checkRole(user.role);
 
-        const { id } = params?.body;
+        const { id } = params.body;
 
         return Program.findOne({
             nest: true,
             where: {
                 id: id,
             },
-            include: {
-                as: 'events',
-                model: Event,
-                attributes: ['id', 'name', 'src', 'type', 'time', 'order'],
-            },
+            include: [
+                {
+                    as: 'events',
+                    model: Event,
+                    attributes: ['id', 'name', 'src', 'type', 'time', 'order'],
+                },
+                {
+                    as: 'author',
+                    model: User,
+                },
+            ],
             order: [
                 [
                     { model: Event, as: 'events' },
@@ -148,7 +153,7 @@ class ProgramService
                 try {
                     await Event.create({
                         name: "Объявления в системе",
-                        src: 'http://rstring.mgul.ac.ru/adscast',
+                        src: '/adscast',
                         order: 1,
                         isActive: true,
                         type: 'webform',
@@ -214,7 +219,7 @@ class ProgramService
                 }
         }
 
-        return await this.getOne({
+        return this.getOne({
             user: user,
             body: {
                 id: program.id,
@@ -284,6 +289,30 @@ class ProgramService
             where: {
                 id: id,
             },
+        });
+    }
+
+    /**
+     * Получить список программ, доступных для замены в композициях
+     * 
+     * @param {*} params Входные GET-параметры
+     * @returns Promise<Program> Список собственных не использованных программ пользователя
+     */
+    async selfPrograms(params)
+    {
+        const { user } = params;
+        this.checkRole(user.role);
+
+        return Program.findAll({
+            nest: true,
+            where: {
+                authorId: user.userId,
+                composeId: null,
+            },
+            order: [
+                ['createdAt', 'DESC'],
+            ],
+            attributes: ['id', 'name'],
         });
     }
 

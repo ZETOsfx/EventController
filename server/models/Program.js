@@ -6,24 +6,17 @@ module.exports = (sequelize, DataTypes) =>
 {
     class Program extends Model
     {
-        /**
-         * Helper method for defining associations.
-         * This method is not a part of Sequelize lifecycle.
-         * The `models/index` file will call this method automatically.
-         */
-        static associate(models)
+        static associate({ Event, Compose, User })
         {
-            Program.hasMany(models.Event, {
+            Program.hasMany(Event, {
                 foreignKey: 'programId',
                 as: 'events',
             });
-
-            Program.belongsTo(models.Compose, {
+            Program.belongsTo(Compose, {
                 foreignKey: 'composeId',
                 as: 'compose',
             });
-
-            Program.belongsTo(models.User, {
+            Program.belongsTo(User, {
                 foreignKey: 'authorId',
                 targetKey: 'id',
                 as: 'author',

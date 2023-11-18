@@ -6,7 +6,7 @@ exports.shorthands = undefined;
 exports.up = (pgm) =>
 {
     pgm.createExtension("uuid-ossp", {
-        ifNotExists: true
+        ifNotExists: true,
     });
 
     /**
@@ -17,7 +17,7 @@ exports.up = (pgm) =>
             type: "uuid",
             default: new PgLiteral("uuid_generate_v4()"),
             notNull: true,
-            primaryKey: true
+            primaryKey: true,
         },
         role: {
             type: 'varchar(10)',
@@ -34,7 +34,7 @@ exports.up = (pgm) =>
             type: "uuid",
             default: new PgLiteral("uuid_generate_v4()"),
             notNull: true,
-            primaryKey: true
+            primaryKey: true,
         },
         name: {
             type: 'varchar(16)',
@@ -75,7 +75,7 @@ exports.up = (pgm) =>
             type: "uuid",
             default: new PgLiteral("uuid_generate_v4()"),
             notNull: true,
-            primaryKey: true
+            primaryKey: true,
         },
         name: {
             type: 'varchar(30)',
@@ -92,7 +92,7 @@ exports.up = (pgm) =>
             type: "uuid",
             default: new PgLiteral("uuid_generate_v4()"),
             notNull: true,
-            primaryKey: true
+            primaryKey: true,
         },
         user_id: {
             type: "uuid",
@@ -123,7 +123,7 @@ exports.up = (pgm) =>
             type: "uuid",
             default: new PgLiteral("uuid_generate_v4()"),
             notNull: true,
-            primaryKey: true
+            primaryKey: true,
         },
         name: {
             type: 'varchar(30)',
@@ -148,13 +148,9 @@ exports.up = (pgm) =>
             onDelete: 'cascade',
             onUpdate: 'cascade',
         },
-        screen: {
-            type: 'integer',
-            notNull: false,
-        },
         status: {
             type: 'varchar(10)',
-            notNull: false,
+            notNull: true,
         },
         message: {
             type: 'text',
@@ -171,7 +167,7 @@ exports.up = (pgm) =>
             type: "uuid",
             default: new PgLiteral("uuid_generate_v4()"),
             notNull: true,
-            primaryKey: true
+            primaryKey: true,
         },
         name: {
             type: 'varchar(30)',
@@ -211,7 +207,7 @@ exports.up = (pgm) =>
             type: "uuid",
             default: new PgLiteral("uuid_generate_v4()"),
             notNull: true,
-            primaryKey: true
+            primaryKey: true,
         },
         name: {
             type: 'varchar(50)',
@@ -250,7 +246,7 @@ exports.up = (pgm) =>
             type: "uuid",
             default: new PgLiteral("uuid_generate_v4()"),
             notNull: true,
-            primaryKey: true
+            primaryKey: true,
         },
         compose_id: {
             type: "uuid",
@@ -294,7 +290,7 @@ exports.up = (pgm) =>
             type: "uuid",
             default: new PgLiteral("uuid_generate_v4()"),
             notNull: true,
-            primaryKey: true
+            primaryKey: true,
         },
         name: {
             type: 'varchar(100)',
@@ -336,7 +332,7 @@ exports.up = (pgm) =>
             type: "uuid",
             default: new PgLiteral("uuid_generate_v4()"),
             notNull: true,
-            primaryKey: true
+            primaryKey: true,
         },
         user_id: {
             type: "uuid",
@@ -368,7 +364,7 @@ exports.up = (pgm) =>
             type: "uuid",
             default: new PgLiteral("uuid_generate_v4()"),
             notNull: true,
-            primaryKey: true
+            primaryKey: true,
         },
         name: {
             type: 'text',
@@ -384,6 +380,10 @@ exports.up = (pgm) =>
         },
         weight: {
             type: 'varchar(10)',
+            notNull: true,
+        },
+        resolution: {
+            type: 'varchar(11)',
             notNull: true,
         },
         author_id: {
