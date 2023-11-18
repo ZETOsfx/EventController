@@ -1,33 +1,33 @@
 <script>
 export default {
     inject: ['session', 'socket', 'toast', 'options', 'browserName', 'browserVersion', 'osName', 'osVersion', 'browserEngineName'],
-    data()
-    {
+    data() {
         return {
             short: '',
             description: '',
-        }
+        };
     },
     methods: {
-        connect()
-        {
+        connect() {
             // this.socket.on('note:new', (data) => {
             //     this.session.noread++;
             // });
         },
-        async sendReport()
-        {
+        async sendReport() {
             if (this.short === '' || this.description === '') {
                 this.toast('error', 'Необходимо заполнить все поля для сообщения об ошибке');
                 return;
             }
 
-            let response = await fetch('/report', this.options('POST', {
-                short: this.short,
-                description: this.description,
-                browserData: this.browserName() + ' ' + this.browserVersion() + ' (' + this.browserEngineName() + ')',
-                osData: this.osName() + ' ' + this.osVersion()
-            }));
+            let response = await fetch(
+                '/report',
+                this.options('POST', {
+                    short: this.short,
+                    description: this.description,
+                    browserData: this.browserName() + ' ' + this.browserVersion() + ' (' + this.browserEngineName() + ')',
+                    osData: this.osName() + ' ' + this.osVersion(),
+                })
+            );
             response = await response.json();
 
             if (response.status !== 'success') {
@@ -40,11 +40,10 @@ export default {
             this.description = '';
         },
     },
-    mounted()
-    {
+    mounted() {
         this.connect();
-    }
-}
+    },
+};
 </script>
 
 <template>
@@ -58,10 +57,11 @@ export default {
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <strong>Внимание!</strong> <br>
-                        Отправляя данное сообщение об ошибке, вы соглашаетесь предоставить нам следующие данные: <br>
-                        <p class="mb-0 ms-4"> 1. Используемый вами браузер, его версия и движок </p>
-                        <p class="mb-0 ms-4"> 2. Используемая вами ОС и ее версия </p> <br>
+                        <strong>Внимание!</strong> <br />
+                        Отправляя данное сообщение об ошибке, вы соглашаетесь предоставить нам следующие данные: <br />
+                        <p class="mb-0 ms-4">1. Используемый вами браузер, его версия и движок</p>
+                        <p class="mb-0 ms-4">2. Используемая вами ОС и ее версия</p>
+                        <br />
                         Перечисленная выше информация будет автоматически отправлена вместе с вашими комментариями.
                     </div>
                     <div class="modal-footer">
@@ -78,7 +78,7 @@ export default {
                     <div class="col-12 col-md-6">
                         <div class="row">
                             <div class="col-12">
-                                <input type="text" @keyup.enter="send" v-model="this.short" class="form-control" placeholder="Краткое описание">
+                                <input type="text" @keyup.enter="send" v-model="this.short" class="form-control" placeholder="Краткое описание" />
                             </div>
                         </div>
                         <div class="row mt-2">
@@ -93,12 +93,15 @@ export default {
                         </div>
                     </div>
                     <div class="col-12 col-md-6 mt-2">
-                        "В случае обнаружения какой-либо ошибки в работе системы постарайтесь как можно точнее описать
-                        действия для ее воспроизведения. <br>
-                        Это поможет нам гораздо быстрее устранить неполадки." <br> <br>
-                        <i> C уважением, <br> Команда EditorService </i>
+                        "В случае обнаружения какой-либо ошибки в работе системы постарайтесь как можно точнее описать действия для ее воспроизведения. <br />
+                        Это поможет нам гораздо быстрее устранить неполадки." <br />
+                        <br />
+                        <i>
+                            C уважением, <br />
+                            Команда EventController
+                        </i>
                         <p></p>
-                        <strong>Ваш браузер</strong>: {{ this.browserName() }} {{ this.browserVersion() }} ({{ this.browserEngineName() }})<br>
+                        <strong>Ваш браузер</strong>: {{ this.browserName() }} {{ this.browserVersion() }} ({{ this.browserEngineName() }})<br />
                         <strong>Ваша ОС</strong>: {{ this.osName() }} {{ this.osVersion() }}
                     </div>
                 </div>

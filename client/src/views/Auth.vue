@@ -1,28 +1,24 @@
 <script>
 export default {
     inject: ['formNextFocus'],
-    data()
-    {
+    data() {
         return {
             username: '',
             password: '',
             message: '',
             submitted: false,
-        }
+        };
     },
     computed: {
-        loggingIn()
-        {
+        loggingIn() {
             return this.$store.state.authentication.status.loggingIn;
         },
     },
-    created()
-    {
+    created() {
         this.$store.dispatch('authentication/logout');
     },
     methods: {
-        async signIn()
-        {
+        async signIn() {
             this.submitted = true;
 
             const { username, password } = this;
@@ -32,8 +28,8 @@ export default {
                 await dispatch('authentication/login', { username, password });
             }
         },
-    }
-}
+    },
+};
 </script>
 
 <template>
@@ -46,26 +42,18 @@ export default {
                         <br />
                         <div class="form-floating">
                             <div class="form-floating is-invalid">
-                                <input @keyup.enter="formNextFocus('auth_pass_id')" v-model="username" type="text" class="form-control mb-2" name="name" id="auth_login_id" placeholder="Логин" style="color: black" required>
+                                <input @keyup.enter="formNextFocus('auth_pass_id')" v-model="username" type="text" class="form-control mb-2" name="name" id="auth_login_id" placeholder="Логин" style="color: black" required />
                                 <label for="floatingInputGroup" style="color: black">Логин</label>
                             </div>
                         </div>
                         <div class="form-floating is-invalid">
-                            <input @keyup.delete="password.length === 0 ? formNextFocus('auth_login_id') : ''" @keydown.enter="signIn" v-model="password" type="password" class="form-control mb-2" id="auth_pass_id" name="password" placeholder="Пароль" style="color: black" required>
+                            <input @keyup.delete="password.length === 0 ? formNextFocus('auth_login_id') : ''" @keydown.enter="signIn" v-model="password" type="password" class="form-control mb-2" id="auth_pass_id" name="password" placeholder="Пароль" style="color: black" required />
                             <label for="FIG" style="color: black">Пароль</label>
                         </div>
-                        <div v-show="submitted && !username && password" class="invalid-feedback">
-                            Введите логин
-                        </div>
-                        <div v-show="submitted && !password && username" class="invalid-feedback">
-                            Введите пароль
-                        </div>
-                        <div v-show="submitted && !password && !username" class="invalid-feedback">
-                            Введите данные для входа
-                        </div>
-                        <div v-show="submitted && !loggingIn && password && username" class="invalid-feedback">
-                            Логин или пароль не совпадают
-                        </div>
+                        <div v-show="submitted && !username && password" class="invalid-feedback">Введите логин</div>
+                        <div v-show="submitted && !password && username" class="invalid-feedback">Введите пароль</div>
+                        <div v-show="submitted && !password && !username" class="invalid-feedback">Введите данные для входа</div>
+                        <div v-show="submitted && !loggingIn && password && username" class="invalid-feedback">Логин или пароль не совпадают</div>
                         <button @click="signIn" type="button" class="w-100 btn btn-lg btn-success">Войти</button>
                     </div>
                 </div>

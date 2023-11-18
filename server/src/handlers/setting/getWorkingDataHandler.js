@@ -1,8 +1,7 @@
 const programService = require('../../services/ProgramService');
 const composeService = require('../../services/ComposeService');
 
-const handle = async (req, res) =>
-{
+const handle = async (req, res) => {
     try {
         res.status(200).json({
             status: 'success',
@@ -17,6 +16,6 @@ const handle = async (req, res) =>
             data: await error.message,
         });
     }
-}
+};
 
 module.exports = handle;

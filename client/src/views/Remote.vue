@@ -1,21 +1,19 @@
 <template>
     <div class="intro">
         <div class="container">
-            <h6 class="text mt-4"> Пульт управления </h6>
+            <h6 class="text mt-4">Пульт управления</h6>
             <div class="content">
                 <div class="row">
                     <div class="col-sm-12 col-lg-6 mb-3">
                         <div class="card h-100">
                             <div class="card-header">
-                                <h5 class="card-title m-0"> Кафедра Ка3 - Основной</h5>
+                                <h5 class="card-title m-0">Кафедра Ка3 - Основной</h5>
                             </div>
                             <div v-if="!connected" class="card-body">
                                 <div class="row align-items-center">
-                                    <div v-if="!err" class="spinner-border text-success col-auto ms-3 mt-1 mb-1"
-                                        role="status"> </div>
+                                    <div v-if="!err" class="spinner-border text-success col-auto ms-3 mt-1 mb-1" role="status"></div>
                                     <h5 v-if="!err" class="col-auto m-0">Подключение</h5>
-                                    <div v-if="err" class="spinner-grow text-warning col-auto ms-3 mt-1 mb-1" role="status">
-                                    </div>
+                                    <div v-if="err" class="spinner-grow text-warning col-auto ms-3 mt-1 mb-1" role="status"></div>
                                     <h5 v-if="err" class="col-auto m-0">Ошибка подключения</h5>
                                 </div>
                             </div>
@@ -29,11 +27,9 @@
                                     </div>
                                     <div class="col-4">
                                         <button @click="setActive" type="button" class="btn btn-outline-danger w-100">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                                fill="currentColor" class="bi bi-power" viewBox="0 0 16 16">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-power" viewBox="0 0 16 16">
                                                 <path d="M7.5 1v7h1V1h-1z" />
-                                                <path
-                                                    d="M3 8.812a4.999 4.999 0 0 1 2.578-4.375l-.485-.874A6 6 0 1 0 11 3.616l-.501.865A5 5 0 1 1 3 8.812z" />
+                                                <path d="M3 8.812a4.999 4.999 0 0 1 2.578-4.375l-.485-.874A6 6 0 1 0 11 3.616l-.501.865A5 5 0 1 1 3 8.812z" />
                                             </svg>
                                             {{ this.active === 'Вкл.' ? 'Выключить' : 'Включить' }}
                                         </button>
@@ -47,13 +43,10 @@
                                         {{ this.respMute ? 'Без звука' : 'Со звуком' }}
                                     </div>
                                     <div class="col-4">
-                                        <input @click="setMute" v-model="mute" type="checkbox" class="btn-check"
-                                            id="btn-muted" autocomplete="off" :disabled="this.respActive === 'Выкл.'">
+                                        <input @click="setMute" v-model="mute" type="checkbox" class="btn-check" id="btn-muted" autocomplete="off" :disabled="this.respActive === 'Выкл.'" />
                                         <label class="btn btn-outline-warning w-100" for="btn-muted">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                                fill="currentColor" class="bi bi-volume-mute" viewBox="0 0 16 16">
-                                                <path
-                                                    d="M6.717 3.55A.5.5 0 0 1 7 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.5A.5.5 0 0 1 1 10V6a.5.5 0 0 1 .5-.5h2.325l2.363-1.89a.5.5 0 0 1 .529-.06zM6 5.04 4.312 6.39A.5.5 0 0 1 4 6.5H2v3h2a.5.5 0 0 1 .312.11L6 10.96V5.04zm7.854.606a.5.5 0 0 1 0 .708L12.207 8l1.647 1.646a.5.5 0 0 1-.708.708L11.5 8.707l-1.646 1.647a.5.5 0 0 1-.708-.708L10.793 8 9.146 6.354a.5.5 0 1 1 .708-.708L11.5 7.293l1.646-1.647a.5.5 0 0 1 .708 0z" />
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-volume-mute" viewBox="0 0 16 16">
+                                                <path d="M6.717 3.55A.5.5 0 0 1 7 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.5A.5.5 0 0 1 1 10V6a.5.5 0 0 1 .5-.5h2.325l2.363-1.89a.5.5 0 0 1 .529-.06zM6 5.04 4.312 6.39A.5.5 0 0 1 4 6.5H2v3h2a.5.5 0 0 1 .312.11L6 10.96V5.04zm7.854.606a.5.5 0 0 1 0 .708L12.207 8l1.647 1.646a.5.5 0 0 1-.708.708L11.5 8.707l-1.646 1.647a.5.5 0 0 1-.708-.708L10.793 8 9.146 6.354a.5.5 0 1 1 .708-.708L11.5 7.293l1.646-1.647a.5.5 0 0 1 .708 0z" />
                                             </svg>
                                             {{ !this.respMute ? 'Без звука' : 'Со звуком' }}
                                         </label>
@@ -67,8 +60,7 @@
                                         {{ this.portType[this.portIndex.indexOf(Number(this.respInputPort))] }}
                                     </div>
                                     <div class="col-4">
-                                        <select @change="setPort" v-model="inputPort" class="form-select form-select-sm"
-                                            aria-label=".form-select-sm example" :disabled="this.respActive === 'Выкл.'">
+                                        <select @change="setPort" v-model="inputPort" class="form-select form-select-sm" aria-label=".form-select-sm example" :disabled="this.respActive === 'Выкл.'">
                                             <!-- ПРОСТАВЛЕНО ПО ДОКУМЕНТАЦИИ -->
                                             <option value="1" selected>VGA</option>
                                             <option value="2">RGB/HV</option>
@@ -84,26 +76,21 @@
                                     <div class="col-4">
                                         <strong> Громкость: </strong>
                                     </div>
-                                    <div class="col-4">
-                                        {{ respSound }}/100
-                                    </div>
+                                    <div class="col-4">{{ respSound }}/100</div>
                                     <div class="col-4">
                                         <label for="customRange2" class="form-label">Задать: {{ sound }}/100 </label>
-                                        <input @change="setVolume" v-model="sound" type="range" class="form-range" min="0"
-                                            max="100" id="customRange2" :disabled="this.respActive === 'Выкл.'">
+                                        <input @change="setVolume" v-model="sound" type="range" class="form-range" min="0" max="100" id="customRange2" :disabled="this.respActive === 'Выкл.'" />
                                     </div>
                                 </div>
                                 <div class="row w-100 align-items-center mt-2">
                                     <div class="col-4">
-                                        <strong> Блокировки клавиш и
-                                            ИК: </strong>
+                                        <strong> Блокировки клавиш и ИК: </strong>
                                     </div>
                                     <div class="col-4">
                                         {{ this.respBlockButton ? 'Заблокировано' : 'Разблокировано' }}
                                     </div>
                                     <div class="col-4">
-                                        <button @click="setBlockButtons" type="checkbox"
-                                            class="btn btn-outline-success w-100" :disabled="this.respActive === 'Выкл.'">
+                                        <button @click="setBlockButtons" type="checkbox" class="btn btn-outline-success w-100" :disabled="this.respActive === 'Выкл.'">
                                             {{ this.blockButton ? 'Выключить' : 'Включить' }}
                                         </button>
                                     </div>
@@ -129,9 +116,7 @@
                                     <div class="col-6">
                                         <strong> Состояния датчика температуры: </strong>
                                     </div>
-                                    <div class="col-6">
-                                        Работает
-                                    </div>
+                                    <div class="col-6">Работает</div>
                                 </div>
                                 <div class="row w-100 align-items-center">
                                     <div class="col-6">
@@ -145,9 +130,7 @@
                                     <div class="col-6">
                                         <strong> Статус ошибки: </strong>
                                     </div>
-                                    <div class="col-6">
-                                        Вентилятор охлаждения -3 неисправность: 82h
-                                    </div>
+                                    <div class="col-6">Вентилятор охлаждения -3 неисправность: 82h</div>
                                 </div>
                             </div>
                             <!-- <div class="card-footer text-end">
@@ -160,7 +143,6 @@
                         </div>
                         <!-- КОНЕЦ: ПЛАШКА ДЛЯ 3х ШАБЛОНОВ -->
                     </div>
-
                 </div>
             </div>
         </div>
@@ -170,8 +152,7 @@
 <script>
 export default {
     inject: ['socket', 'session', 'toast'],
-    data()
-    {
+    data() {
         return {
             err: false,
 
@@ -195,50 +176,45 @@ export default {
             respProductName: '',
             respSerialNumber: '',
             respTempSensor: '',
-        }
+        };
     },
     methods: {
         // Запрос конкетного параметра состояния с сервера "ПЛАТА"
-        getValue(room, oid)
-        {
+        getValue(room, oid) {
             if (typeof room !== 'string') {
                 room = room.toString();
             }
 
-            console.log(`Get ${oid} from TV in ${room}`)
+            console.log(`Get ${oid} from TV in ${room}`);
             this.socket().to(room).emit('getParam', { room, oid });
         },
         // Отправить команду на сервер "ПЛАТА"
-        setValue(room, oid, value)
-        {
+        setValue(room, oid, value) {
             if (typeof room !== 'string') {
                 room = room.toString();
             }
 
-            console.log(`Set ${oid} = ${value} TV in ${room}`)
+            console.log(`Set ${oid} = ${value} TV in ${room}`);
             this.socket().emit('setParam', { room, oid, value });
         },
         // Получить все параметры состояния сразу
-        getTelemetry(room)
-        {
+        getTelemetry(room) {
             if (typeof room !== 'string') {
                 room = room.toString();
             }
 
-            console.log(`Get telemetry from TV in ${room}`)
+            console.log(`Get telemetry from TV in ${room}`);
             this.socket().emit('getTelemetry', { room });
         },
 
-        connect()
-        {
+        connect() {
             // Получение ответа от сервера "ПЛАТА"
-            this.socket().on('remote:update', (data) =>
-            {
-                var enc = new TextDecoder("utf-8");
+            this.socket().on('remote:update', data => {
+                var enc = new TextDecoder('utf-8');
 
                 switch (data.type) {
                     case 'telemetry':
-                        this.respActive = data.value.pdmPowerRequestedState === 7 ? 'Выкл.' : (data.value.pdmPowerRequestedState === 8) ? 'Ожид.' : 'Вкл.';
+                        this.respActive = data.value.pdmPowerRequestedState === 7 ? 'Выкл.' : data.value.pdmPowerRequestedState === 8 ? 'Ожид.' : 'Вкл.';
                         this.active = this.respActive;
 
                         this.respSound = Number(data.value.pdmAudioVolume);
@@ -298,8 +274,7 @@ export default {
             this.getTelemetry(446);
         },
 
-        setMute()
-        {
+        setMute() {
             if (this.mute) {
                 this.setValue(446, 'pdmAudioMute', 2);
             } else {
@@ -309,8 +284,7 @@ export default {
             this.mute = !this.mute;
         },
 
-        setActive()
-        {
+        setActive() {
             if (this.respActive === 'Вкл.') {
                 this.setValue(446, 'pdmPowerRequestedState', 7);
                 this.active = 'Выкл.';
@@ -320,23 +294,19 @@ export default {
             }
         },
 
-        setPort()
-        {
-            this.$nextTick(() =>
-            {
+        setPort() {
+            this.$nextTick(() => {
                 this.setValue(446, 'pdmDisplaySetInputSource', Number(this.inputPort));
             });
         },
 
-        setVolume()
-        {
+        setVolume() {
             this.setValue(446, 'pdmAudioVolume', Number(this.sound));
             this.mute = false;
             this.respMute = false;
         },
 
-        setBlockButtons()
-        {
+        setBlockButtons() {
             if (this.blockButton) {
                 this.setValue(446, 'pdmButtonEnabled', 1);
             } else {
@@ -346,9 +316,8 @@ export default {
             this.blockButton = !this.blockButton;
         },
     },
-    mounted()
-    {
+    mounted() {
         this.connect();
-    }
-}
+    },
+};
 </script>

@@ -4,6 +4,7 @@ const { File, User } = require('../../models');
 
 const fs = require('fs');
 const path = require('path');
+const { Op } = require('sequelize');
 
 /**
  * Class FileImageService
@@ -11,16 +12,14 @@ const path = require('path');
  *
  * @package src/services
  */
-class FileImageService
-{
+class FileImageService {
     /**
      * Получить список всех файлов
      *
      * @return {Promise<File>}
      * Список всех файлов на сервере, информация по загрузке диска
      */
-    async getAll()
-    {
+    async getAll() {
         return File.findAll({
             nest: true,
             where: {
@@ -31,10 +30,8 @@ class FileImageService
                 model: User,
                 attributes: ['name'],
             },
-            attributes: ['id', 'name', 'src', 'type', 'weight', 'expires', 'isUnlimited', 'format', 'resolution'],
-            order: [
-                ['createdAt', 'DESC'],
-            ],
+            attributes: ['id', 'name', 'src', 'type', 'weight', 'expires', 'isUnlimited', 'format', 'resolution', 'createdAt'],
+            order: [['createdAt', 'DESC']],
         });
     }
 
@@ -44,8 +41,7 @@ class FileImageService
      * @param params Входные POST параметры
      * @return {Promise<File>} Загруженное (-ые) изображение (-я)
      */
-    async addList(params)
-    {
+    async addList(params) {
         const { user } = params;
         const files = params?.files;
 
@@ -58,16 +54,19 @@ class FileImageService
             let nameExt = files[i].originalname.split('.');
             let changedName = files[i].path.split('/').slice(-1);
 
+            const currentDate = new Date();
+            currentDate.setDate(currentDate.getDate() + 21);
+
             await File.create({
-                name: nameExt[0],
-                format: nameExt[1],
+                name: nameExt.slice(0, -1).join('.'),
+                format: nameExt.pop(),
                 src: process.env.UPLOAD_PATH_IMAGINE + '/' + changedName,
                 type: files[i].fieldname,
-                weight: Math.round(files[i].size / (1024 * 1024) * 100) / 100 + ' МБ',
+                weight: Math.round((files[i].size / (1024 * 1024)) * 100) / 100 + ' МБ',
                 resolution: resolution[i],
                 authorId: user.userId,
-                expires: "9999-01-01",
-                isUnlimited: true,
+                expires: currentDate,
+                isUnlimited: false,
             });
         }
 
@@ -76,12 +75,11 @@ class FileImageService
 
     /**
      * Внести изменения в параметры хранения файла
-     * 
+     *
      * @param params Входные POST параметры
      * @return {Promise<File>} Результат операции
      */
-    async updateOne(params)
-    {
+    async updateOne(params) {
         const { user } = params;
         const { id, expires, isUnlimited } = params?.body;
 
@@ -97,14 +95,17 @@ class FileImageService
             throw new Error('Менять чужие файлы может только администратор');
         }
 
-        return File.update({
-            isUnlimited: isUnlimited,
-            expires: (isUnlimited) ? "9999-01-01" : expires,
-        }, {
-            where: {
-                id: id,
+        return File.update(
+            {
+                isUnlimited: isUnlimited,
+                expires: isUnlimited ? '9999-01-01' : expires,
             },
-        });
+            {
+                where: {
+                    id: id,
+                },
+            }
+        );
     }
 
     /**
@@ -113,8 +114,7 @@ class FileImageService
      * @param params Входные DELETE параметры
      * @return number Статус операции
      */
-    async deleteOne(params)
-    {
+    async deleteOne(params) {
         const { user } = params;
         const { id } = params?.body;
 
@@ -137,6 +137,22 @@ class FileImageService
         return await File.destroy({
             where: {
                 id: file.id,
+            },
+        });
+    }
+
+    /**
+     * Процедура очистки просроченных по актуальности файлов
+     *
+     * @returns {Promise<void>}
+     */
+    async clearExpires() {
+        const currentDate = new Date(Date.now());
+        await File.destroy({
+            where: {
+                expires: {
+                    [Op.lt]: currentDate,
+                },
             },
         });
     }

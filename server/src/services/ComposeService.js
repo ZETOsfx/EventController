@@ -1,4 +1,4 @@
-const { Op } = require("sequelize");
+const { Op } = require('sequelize');
 const { Program, Compose, Event, User } = require('../../models');
 
 const programService = require('./ProgramService');
@@ -9,16 +9,14 @@ const programService = require('./ProgramService');
  *
  * @package src/services
  */
-class ComposeService
-{
+class ComposeService {
     /**
      * Получить все композиции (собственные для пользователя + все остальные)
      *
      * @param params Входные GET параметры
      * @return {Promise<{otherComposes: *, userComposes: *}>} Композиции запрашивающего + все остальные
      */
-    async getAll(params)
-    {
+    async getAll(params) {
         const { user } = params;
         this.checkRole(user.role);
 
@@ -47,15 +45,8 @@ class ComposeService
                 ],
                 attributes: ['id', 'name', 'comment', 'date', 'isSpecial', 'status', 'message'],
                 order: [
-                    [
-                        { model: Program, as: 'programs' },
-                        'timeToSwap', 'ASC'
-                    ],
-                    [
-                        { model: Program, as: 'programs' },
-                        { model: Event, as: 'events' },
-                        'order', 'ASC'
-                    ],
+                    [{ model: Program, as: 'programs' }, 'timeToSwap', 'ASC'],
+                    [{ model: Program, as: 'programs' }, { model: Event, as: 'events' }, 'order', 'ASC'],
                     ['createdAt', 'DESC'],
                 ],
             }),
@@ -85,15 +76,8 @@ class ComposeService
                 ],
                 attributes: ['id', 'name', 'comment', 'date', 'isSpecial', 'status', 'message'],
                 order: [
-                    [
-                        { model: Program, as: 'programs' },
-                        'timeToSwap', 'ASC'
-                    ],
-                    [
-                        { model: Program, as: 'programs' },
-                        { model: Event, as: 'events' },
-                        'order', 'ASC'
-                    ],
+                    [{ model: Program, as: 'programs' }, 'timeToSwap', 'ASC'],
+                    [{ model: Program, as: 'programs' }, { model: Event, as: 'events' }, 'order', 'ASC'],
                     ['createdAt', 'DESC'],
                 ],
             }),
@@ -101,18 +85,12 @@ class ComposeService
     }
 
     /**
-     * Получить события программ внутри композиции (кнопка "Подробнее")
-     *
-     * - id : идентификатор разворачиваемой композиции
-     * - changedTemplates : список ID программ внутри композиции
-     *      + Standard type : если внесены изменения (else : null)
-     *      + Special type : всегда в установленном порядке
+     * Получить события программ внутри композиции
      *
      * @param params Входные GET параметры
      * @return Promise<Object> Списки вложений в композицию
      */
-    async getOne(params)
-    {
+    async getOne(params) {
         const { user } = params;
         this.checkRole(user.role);
 
@@ -142,15 +120,8 @@ class ComposeService
             ],
             attributes: ['id', 'name', 'comment', 'date', 'isSpecial', 'status', 'message'],
             order: [
-                [
-                    { model: Program, as: 'programs' },
-                    'timeToSwap', 'ASC'
-                ],
-                [
-                    { model: Program, as: 'programs' },
-                    { model: Event, as: 'events' },
-                    'order', 'ASC'
-                ],
+                [{ model: Program, as: 'programs' }, 'timeToSwap', 'ASC'],
+                [{ model: Program, as: 'programs' }, { model: Event, as: 'events' }, 'order', 'ASC'],
             ],
         });
     }
@@ -168,8 +139,7 @@ class ComposeService
      * @param params Входные POST параметры
      * @return { compose, programs } Новая композиция в виде объекта и список ее программ
      */
-    async addOne(params)
-    {
+    async addOne(params) {
         const { user } = params;
         this.checkRole(user.role);
 
@@ -187,8 +157,8 @@ class ComposeService
         }
 
         let date = new Date();
-        let day = ("0" + date.getDate()).slice(-2);
-        let month = ("0" + (date.getMonth() + 1)).slice(-2);
+        let day = ('0' + date.getDate()).slice(-2);
+        let month = ('0' + (date.getMonth() + 1)).slice(-2);
         let year = date.getFullYear();
         let currentDate = year + '-' + month + '-' + day;
 
@@ -200,7 +170,7 @@ class ComposeService
                 throw new Error('Некорректный запрос: не для всех шаблонов задано время.');
             }
         } else {
-            if (!name || (programsId[0] === '-' || programsId[1] === '-' || programsId[2] === '-') || !screen) {
+            if (!name || programsId[0] === '-' || programsId[1] === '-' || programsId[2] === '-' || !screen) {
                 throw new Error('Некорректный запрос');
             }
         }
@@ -246,14 +216,17 @@ class ComposeService
                 programsId[index] = duplicate.id;
             }
 
-            const updatedTemplate = await Program.update({
-                composeId: compose.id,
-                timeToSwap: timings[index],
-            }, {
-                where: {
-                    id: programsId[index],
+            const updatedTemplate = await Program.update(
+                {
+                    composeId: compose.id,
+                    timeToSwap: timings[index],
                 },
-            });
+                {
+                    where: {
+                        id: programsId[index],
+                    },
+                }
+            );
 
             if (updatedTemplate[0] === 0) {
                 throw new Error('Некорректный ID: ' + programsId);
@@ -279,8 +252,7 @@ class ComposeService
      * @param params Входные DELETE параметры
      * @return
      */
-    async deleteOne(params)
-    {
+    async deleteOne(params) {
         const { user } = params;
         const { id, withPrograms, byModer } = params?.body;
 
@@ -311,9 +283,7 @@ class ComposeService
                     composeId: compose.id,
                 },
                 attributes: ['id', 'name'],
-                order: [
-                    ['timeToSwap', 'ASC'],
-                ],
+                order: [['timeToSwap', 'ASC']],
             });
 
             for (let i = 0; i < programs.length; i++) {
@@ -321,7 +291,7 @@ class ComposeService
                     continue;
                 }
                 for (let j = i + 1; j < programs.length; j++) {
-                    if ((programs[i].name === programs[j].name) && !(duplicatesToDestroy.includes(programs[j].id))) {
+                    if (programs[i].name === programs[j].name && !duplicatesToDestroy.includes(programs[j].id)) {
                         duplicatesToDestroy.push(programs[j].id);
                     }
                 }
@@ -360,8 +330,7 @@ class ComposeService
      * @param params Входные POST параметры
      * @returns { compose, programs } Измененная композиция и список программ
      */
-    async updateOne(params)
-    {
+    async updateOne(params) {
         const { user } = params;
         this.checkRole(user.role);
 
@@ -387,21 +356,27 @@ class ComposeService
             throw new Error('Некорректный запрос: несовпадение числа таймингов и программ.');
         }
 
-        await Compose.update({
-            date: forDate,
-        }, {
-            where: {
-                id: id,
+        await Compose.update(
+            {
+                date: forDate,
             },
-        });
-        await Program.update({
-            composeId: null,
-            timeToSwap: null,
-        }, {
-            where: {
-                composeId: id,
+            {
+                where: {
+                    id: id,
+                },
+            }
+        );
+        await Program.update(
+            {
+                composeId: null,
+                timeToSwap: null,
             },
-        });
+            {
+                where: {
+                    composeId: id,
+                },
+            }
+        );
 
         let timings = timingList;
         if (!compose.isSpecial) {
@@ -409,15 +384,18 @@ class ComposeService
         }
 
         for (let i in programs) {
-            let result = await Program.update({
-                composeId: id,
-                timeToSwap: timings[i],
-            }, {
-                where: {
-                    id: programs[i].id,
-                    composeId: null,
+            let result = await Program.update(
+                {
+                    composeId: id,
+                    timeToSwap: timings[i],
                 },
-            });
+                {
+                    where: {
+                        id: programs[i].id,
+                        composeId: null,
+                    },
+                }
+            );
 
             if (!result) {
                 throw new Error('Некорректный запрос: передан ID несуществующей программы');
@@ -447,8 +425,7 @@ class ComposeService
      *
      * @param role Роль пользователя в системе
      */
-    checkRole(role)
-    {
+    checkRole(role) {
         if (!['admin', 'moderator', 'editor'].includes(role)) {
             throw new Error('Недостаточно прав доступа');
         }

@@ -1,4 +1,4 @@
-const { Op } = require("sequelize");
+const { Op } = require('sequelize');
 const { Note, User, User_Note } = require('../../models');
 
 /**
@@ -7,16 +7,14 @@ const { Note, User, User_Note } = require('../../models');
  *
  * @package src/services
  */
-class NoteService
-{
+class NoteService {
     /**
      * Получение полного списка уведомлений (при прочтении)
      *
      * @param params Входные GET параметры
      * @return Promise<array> Список всех актуальных уведомлений в системе
      */
-    async getAll(params)
-    {
+    async getAll(params) {
         const { user } = params;
 
         const notes = await Note.findAll({
@@ -36,9 +34,7 @@ class NoteService
                 attributes: ['name'],
             },
             nest: true,
-            order: [
-                ['createdAt', 'DESC'],
-            ],
+            order: [['createdAt', 'DESC']],
             attributes: ['id', 'name', 'comment', 'addressedTo', 'expires', 'onBroadcast'],
         });
 
@@ -60,12 +56,11 @@ class NoteService
 
     /**
      * Получить конкретное уведомление из хранилища
-     * 
+     *
      * @param {*} id ID уведомления
-     * @returns 
+     * @returns
      */
-    async getOne(id)
-    {
+    async getOne(id) {
         return Note.findOne({
             where: {
                 id: id,
@@ -85,8 +80,7 @@ class NoteService
      *
      * @return Promise<array> Список уведомлений, отображаемых на трансляции
      */
-    async getFromCast()
-    {
+    async getFromCast() {
         return Note.findAll({
             where: {
                 onBroadcast: true,
@@ -98,9 +92,7 @@ class NoteService
                 attributes: ['name'],
             },
             nest: true,
-            order: [
-                ['createdAt', 'DESC'],
-            ],
+            order: [['createdAt', 'DESC']],
             attributes: ['id', 'name', 'comment', 'addressedTo', 'expires', 'onBroadcast'],
         });
     }
@@ -111,8 +103,7 @@ class NoteService
      * @param params Входные POST параметры
      * @return Promise<Note> Добавленное уведомление
      */
-    async addOne(params)
-    {
+    async addOne(params) {
         const { user } = params;
         this.checkRole(user.role);
 
@@ -128,7 +119,7 @@ class NoteService
         }
 
         if (unlimited) {
-            time = "9999-01-01";
+            time = '9999-01-01';
         }
 
         const note = await Note.create({
@@ -156,8 +147,7 @@ class NoteService
      * @param params Входные POST параметры
      * @return Promise<Note> Удаленное уведомление
      */
-    async deleteOne(params)
-    {
+    async deleteOne(params) {
         const { user } = params;
         const { id } = params.body;
 
@@ -165,7 +155,7 @@ class NoteService
             where: {
                 id: id,
             },
-        })
+        });
 
         if (!(['admin', 'moderator', 'manager'].includes(user.role) || note.addressedTo === user.name)) {
             throw new Error('Недостаточно прав доступа');
@@ -183,11 +173,26 @@ class NoteService
      *
      * @param role Роль пользователя в системе
      */
-    checkRole(role)
-    {
+    checkRole(role) {
         if (!['admin', 'moderator', 'manager'].includes(role)) {
             throw new Error('Недостаточно прав доступа');
         }
+    }
+
+    /**
+     * Процедура очистки просроченных по актуальности уведомлений
+     *
+     * @returns {Promise<void>}
+     */
+    async clearExpires() {
+        const currentDate = new Date(Date.now());
+        await Note.destroy({
+            where: {
+                expires: {
+                    [Op.lt]: currentDate,
+                },
+            },
+        });
     }
 }
 

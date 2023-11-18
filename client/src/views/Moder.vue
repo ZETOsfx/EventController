@@ -48,6 +48,7 @@ export default {
             deleteModal: '',
             saveModal: '',
             actModal: '',
+            activeClearModal: '',
 
             format: /[`!@#$%^&*()+=\[\]{};':"\\|,.<>\/?~]/
         }
@@ -392,6 +393,7 @@ export default {
                 this.deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
                 this.actModal = new bootstrap.Modal(document.getElementById('activeModal'));
                 this.fullscreenModal = new bootstrap.Modal(document.getElementById('PreviewModal'));
+                this.activeClearModal = new bootstrap.Modal(document.getElementById('ActiveClearModal'));
             }
 
             let response = await fetch(`/control`, {
@@ -559,6 +561,10 @@ export default {
                     this.forModal.hasActiveOnMonitor = this.checkActive(obj.compose.screen);
                     this.actModal.show();
                     break;
+                case 'active-clear':
+                    this.forModal.id = null;
+                    this.activeClearModal.show();
+                    break;
                 default:
                     this.toast('error', 'Администратору направлен отчет о ваших действиях');
             }
@@ -593,7 +599,7 @@ export default {
 
                 operation = {
                     'approved': this.forModal.comment,
-                    'changed' : {
+                    'changed': {
                         forDate: req.compose.date,
                         programs: req.compose.isSpecial ? tmpFilter : req.compose.programs,
                         eventList: req.compose.isSpecial ? eventFilter : events,
@@ -658,7 +664,7 @@ export default {
                 return;
             }
 
-            switch(list) {
+            switch (list) {
                 case 'request':
                     this.waitingRequests.splice(this.forModal.index, 1);
                     this.toast('success', 'Запрос был успешно отклонен.');
@@ -691,19 +697,41 @@ export default {
          * Сохранить изменения, внесенные в запрос
          * @returns {Promise<void>}
          */
-        async saveChangesButton()
+        async saveChangesButton(req, events)
         {
             if (this.userProcess === '') {
                 this.toast('error', 'Некорректный параметр. Начните обработку корректно.');
                 return;
             }
 
+            if (!events) {
+                this.toast('error', 'Нельзя оставлять композицию пустой!');
+                return;
+            }
+
+            let tmpFilter = [], timeFilter = [], eventFilter = [];
+            let programs = req.compose.programs;
+
+            for (let i in programs) {
+                tmpFilter.push({
+                    id: programs[i].id,
+                    name: programs[i].name,
+                });
+                timeFilter.push(programs[i].timeToSwap);
+            }
+            for (let i in events) {
+                eventFilter.push(events[i].events);
+            }
+
             let response = await fetch('/control/update', this.options('POST', {
                 id: this.userProcess,
                 operation: {
                     'changed': {
-
-                    },
+                        forDate: req.compose.date,
+                        programs: req.compose.isSpecial ? tmpFilter : req.compose.programs,
+                        eventList: req.compose.isSpecial ? eventFilter : events,
+                        timingList: req.compose.isSpecial ? timeFilter : null,
+                    }
                 },
             }));
             response = await response.json();
@@ -713,31 +741,24 @@ export default {
                 return;
             }
 
+            // this.socket().emit('con-process', {
+            //     list: this.forModal.obj.isActive ? 'act' : 'acc',
+            //     process: this.forModal.name,
+            //     user: this.session().name
+            // });
+
             if (!this.forModal.obj.isActive) {
                 this.toast('success', 'В запрос "' + this.forModal.name + '" успешно внесены изменения.');
-                this.approvedRequests[this.forModal.index].isStartedProcess = false;
-
-                // this.socket().emit('con-process', {
-                //     list: 'acc',
-                //     process: this.forModal.name,
-                //     user: this.session().name
-                // });
-            }
-            else {
+            } else {
                 this.toast('success', 'В активную трансляцию успешно внесены изменения.');
-                this.activeRequests[this.forModal.index].isStartedProcess = false;
-
-                // this.socket().emit('con-process', {
-                //     list: 'act',
-                //     process: this.forModal.name,
-                //     user: this.session().name
-                // });
                 // this.socket().emit('upd-active', {
                 //     name: this.forModal.name
                 // });
             }
-            this.saveModal.hide();
+
+            this.activeRequests[this.forModal.index].isStartedProcess = false;
             this.userProcess = '';
+            this.saveModal.hide();
         },
 
         /**
@@ -842,6 +863,7 @@ export default {
 
             await this.getRequests(false);
             this.actModal.hide();
+            this.activeClearModal.hide();
             this.toast('success', 'Трансляция обновлена');
             this.userProcess = '';
 
@@ -881,7 +903,7 @@ export default {
             } else {
                 form.push({ isDisabled: true });
                 data.push(this.addForm);
-                this.addForm = { name: "", src: "", type: 0, time: 15, isActive: true }
+                this.addForm = { name: "", src: "", type: 'image', time: 15, isActive: true }
             }
         },
 
@@ -1043,9 +1065,7 @@ export default {
 
 <template>
     <div class="intro">
-        <detailModals :eventList="eventList" :editFormS="editFormS" :editFormB="editFormB" :editFormL="editFormL"
-            :addForm="addForm" :addEventCmp="addEvent" :delEventCmp="delEvent" :moveEventCmp="moveEvent" :demoMode="false"
-            :currentModalPage="currentModalPage" :customForms="customForms" :editEventCmp="editEvent"> 
+        <detailModals :eventList="eventList" :editFormS="editFormS" :editFormB="editFormB" :editFormL="editFormL" :addForm="addForm" :addEventCmp="addEvent" :delEventCmp="delEvent" :moveEventCmp="moveEvent" :demoMode="false" :currentModalPage="currentModalPage" :customForms="customForms" :editEventCmp="editEvent">
         </detailModals>
 
         <!-- Modal for Deny -->
@@ -1083,13 +1103,65 @@ export default {
                         Вы собираетесь утвердить данное расписание. <br> Вы уверены?
                         <div class="mb-3">
                             <label for="message-text" class="col-form-label"><br> Комментарий бригаде:</label>
-                            <textarea @keyup.enter="buttonApprove(forModal.obj, (forModal.obj.compose.isSpecial ? eventList?.data : [eventList?.data?.lesson, eventList?.data?.breaktime, eventList?.data?.lunch]))"
-                                      v-model="this.forModal.comment" class="form-control" id="message-text"></textarea>
+                            <textarea @keyup.enter="buttonApprove(forModal.obj, (forModal.obj.compose.isSpecial ? eventList?.data : [eventList?.data?.lesson, eventList?.data?.breaktime, eventList?.data?.lunch]))" v-model="this.forModal.comment" class="form-control" id="message-text"></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
                         <button @click="buttonApprove(forModal.obj, (forModal.obj.compose.isSpecial ? eventList?.data : [eventList?.data?.lesson, eventList?.data?.breaktime, eventList?.data?.lunch]))" type="button" class="btn btn-success">Утвердить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal ActiveClear -->
+        <div class="modal fade" id="ActiveClearModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h1 class="modal-title fs-5" id="exampleModalToggleLabel"> Выберите действие </h1>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <strong> На целевом мониторе идет трансляция </strong>
+                        <p></p>
+                        Вы собираетесь очистить трансляцию на данном мониторе.
+                        <p></p>
+                        Установленную композицию стоит:
+                        <div class="row w-100 align-items-center g-1 mt-2">
+                            <div class="col-12 col-sm-4">
+                                <input @click="forModal.activeAction = 'return'; forModal.actionData = 'Возвращаю композицию с трансляции.'" type="radio" class="btn-check" name="options" id="queue" autocomplete="off" checked>
+                                <label class="w-100 btn btn-outline-success" for="queue">Вернуть редактору</label>
+                            </div>
+                            <div class="col-12 col-sm-4">
+                                <input @click="forModal.activeAction = 'queue'; forModal.actionData = new Date()" type="radio" class="btn-check" name="options" id="editor" autocomplete="off">
+                                <label class="w-100 btn btn-outline-secondary" for="editor">Вернуть в очередь</label>
+                            </div>
+                            <div class="col-12 col-sm-4">
+                                <input @click="forModal.activeAction = 'delete'; forModal.actionData = {}" type="radio" class="btn-check" name="options" id="delete" autocomplete="off">
+                                <label class="w-100 btn btn-outline-danger" for="delete"> Удалить композицию </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <div class="w-100">
+                            <textarea v-if="forModal.activeAction === 'return'" v-model="forModal.actionData" class="form-control"></textarea>
+                            <input v-if="forModal.activeAction === 'queue'" v-model="forModal.actionData" name="time" value="" id="addDate" class="col form-control mt-1" type="date" />
+                            <div v-if="forModal.activeAction === 'delete'" style="color:red">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-exclamation-triangle-fill" viewBox="0 0 16 16">
+                                    <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"></path>
+                                </svg>
+                                Данное действие отменить будет нельзя
+                            </div>
+                            <div class="row w-100 align-items-center g-1 mt-2">
+                                <div class="col-12 col-sm-6">
+                                    <button class="w-100 mt-1 btn btn-outline-secondary" data-bs-dismiss="modal"> Оставить в очереди </button>
+                                </div>
+                                <div class="col-12 col-sm-6">
+                                    <a @click="setActive()" class="w-100 mt-1 btn btn-success"> Выполнить </a>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1134,14 +1206,14 @@ export default {
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                        <button @click="saveChangesButton()" type="button" class="btn btn-success">Уверен</button>
+                        <button @click="saveChangesButton(forModal.obj, (forModal.obj.compose.isSpecial ? eventList?.data : [eventList?.data?.lesson, eventList?.data?.breaktime, eventList?.data?.lunch]))" type="button" class="btn btn-success">Уверен</button>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Modal for Set Active -->
-        <div class="modal fade" id="activeModal" tabindex="-1" >
+        <div class="modal fade" id="activeModal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -1158,15 +1230,15 @@ export default {
                         Старую композицию стоит:
                         <div class="row w-100 align-items-center g-1 mt-2">
                             <div class="col-12 col-sm-4">
-                                <input @click="forModal.activeAction='return'; forModal.actionData='Возвращаю композицию с трансляции.'" type="radio" class="btn-check" name="options" id="queue" autocomplete="off" checked>
+                                <input @click="forModal.activeAction = 'return'; forModal.actionData = 'Возвращаю композицию с трансляции.'" type="radio" class="btn-check" name="options" id="queue" autocomplete="off" checked>
                                 <label class="w-100 btn btn-outline-success" for="queue">Вернуть редактору</label>
                             </div>
                             <div class="col-12 col-sm-4">
-                                <input @click="forModal.activeAction='queue'; forModal.actionData=new Date()" type="radio" class="btn-check" name="options" id="editor" autocomplete="off">
+                                <input @click="forModal.activeAction = 'queue'; forModal.actionData = new Date()" type="radio" class="btn-check" name="options" id="editor" autocomplete="off">
                                 <label class="w-100 btn btn-outline-secondary" for="editor">Вернуть в очередь</label>
                             </div>
                             <div class="col-12 col-sm-4">
-                                <input @click="forModal.activeAction='delete'; forModal.actionData = {}" type="radio" class="btn-check" name="options" id="delete" autocomplete="off">
+                                <input @click="forModal.activeAction = 'delete'; forModal.actionData = {}" type="radio" class="btn-check" name="options" id="delete" autocomplete="off">
                                 <label class="w-100 btn btn-outline-danger" for="delete"> Удалить композицию </label>
                             </div>
                         </div>
@@ -1178,7 +1250,7 @@ export default {
                     <div class="modal-footer">
                         <div class="w-100">
                             <textarea v-if="forModal.hasActiveOnMonitor && forModal.activeAction === 'return'" v-model="forModal.actionData" class="form-control"></textarea>
-                            <input v-if="forModal.hasActiveOnMonitor && forModal.activeAction === 'queue'" v-model="forModal.actionData" name="time" value="" id="addDate" class="col form-control mt-1" type="date"/>
+                            <input v-if="forModal.hasActiveOnMonitor && forModal.activeAction === 'queue'" v-model="forModal.actionData" name="time" value="" id="addDate" class="col form-control mt-1" type="date" />
                             <div v-if="forModal.hasActiveOnMonitor && forModal.activeAction === 'delete'" style="color:red">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-exclamation-triangle-fill" viewBox="0 0 16 16">
                                     <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"></path>
@@ -1205,10 +1277,10 @@ export default {
                 <div class="modal-content">
                     <div class="modal-header row justify-content-between align-items-center">
                         <div class="col-auto m-0">
-                            <h4 class="modal-title fs-5"><strong>{{ this.composeDetailsModal.templateName }}</strong> ({{this.composeDetailsModal.authorName }}) </h4>
+                            <h4 class="modal-title fs-5"><strong>{{ this.composeDetailsModal.templateName }}</strong> ({{ this.composeDetailsModal.authorName }}) </h4>
                         </div>
                         <div class="col-auto m-0">
-                            <h5 class="m-0"> <strong> {{ this.composeDetailsModal.numberOfCurrentEvent }}/{{this.composeDetailsModal.numberOfEvents }} </strong> </h5>
+                            <h5 class="m-0"> <strong> {{ this.composeDetailsModal.numberOfCurrentEvent }}/{{ this.composeDetailsModal.numberOfEvents }} </strong> </h5>
                         </div>
                         <div class="col-auto">
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -1286,7 +1358,7 @@ export default {
                                         <div class="col-12 col-sm-3 col-md-2 col-xxl-2">
                                             <div class="badge bg-secondary text-wrap align-items-center rounded-pill w-100">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person" viewBox="0 0 16 16">
-                                                    <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4Zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10Z"/>
+                                                    <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4Zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10Z" />
                                                 </svg>
                                                 {{ req.compose.author.name }}
                                             </div>
@@ -1334,8 +1406,7 @@ export default {
                                                 <option v-for="tmp in templatesToReplace" :value="tmp"> {{ tmp.name }} </option>
                                             </select>
                                             <button v-if="waitingRequests[index].isStartedProcess && req.changer !== session().name" @click="openPreview(req, req.compose.programs[1])" type="button" data-bs-toggle="modal" data-bs-target="#PreviewModal" class="btn btn-info btn-sm">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                                    fill="currentColor" class="bi bi-eye-fill" viewBox="0 0 16 16">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-fill" viewBox="0 0 16 16">
                                                     <path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z" />
                                                     <path d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8zm8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" />
                                                 </svg>
@@ -1419,8 +1490,7 @@ export default {
                                     <div v-if="req.isStartedProcess && (userProcess === req.id || req.changer === session().name)" class="col-12 col-sm-12 col-md mb-1">
                                         <!-- Button trigger Details modal -->
                                         <button v-if="req.compose.isSpecial" @click="openDetails(req)" type="button" class="btn btn-outline-info w-100">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                                fill="currentColor" class="bi bi-eye" viewBox="0 0 16 16">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye" viewBox="0 0 16 16">
                                                 <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z" />
                                                 <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z" />
                                             </svg>
@@ -1468,8 +1538,11 @@ export default {
                             <div class="col-xl-4 col-lg-6 col-md-6 col-sm-12 col-xs-12 mb-3 mb-sm-0 g-3">
                                 <div class="card h-100">
                                     <!-- ЭКРАН -->
-                                    <div class="card-header">
-                                        <h5 class="card-title m-0">Кафедра К3 - основной</h5>
+                                    <div class="card-header p-0">
+                                        <div class="row justify-content-between me-3 ms-3 mt-2 mb-2">
+                                            <strong class="card-title mb-0 col-auto p-0">Кафедра К3 - основной</strong>
+                                            <button @click="triggerModal('active-clear', screen, index)" type="button" class="btn-close col-auto p-0 mt-1" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
                                     </div>
                                     <div class="card-body pt-2">
                                         <div class="me-auto">
@@ -1477,7 +1550,7 @@ export default {
                                                 <div class="col-6 pe-1">
                                                     <div class="badge bg-secondary text-wrap align-items-center w-100">
                                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person" viewBox="0 0 16 16">
-                                                            <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4Zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10Z"/>
+                                                            <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4Zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10Z" />
                                                         </svg>
                                                         {{ screen.compose.author.name }}
                                                     </div>
@@ -1485,8 +1558,8 @@ export default {
                                                 <div class="col-6 ps-1">
                                                     <div class="badge bg-secondary text-wrap align-items-center w-100">
                                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-card-text" viewBox="0 0 16 16">
-                                                            <path d="M14.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h13zm-13-1A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-13z"/>
-                                                            <path d="M3 5.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM3 8a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 8zm0 2.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5z"/>
+                                                            <path d="M14.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h13zm-13-1A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-13z" />
+                                                            <path d="M3 5.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM3 8a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 8zm0 2.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5z" />
                                                         </svg>
                                                         {{ screen.compose.name }}
                                                     </div>
@@ -1648,8 +1721,8 @@ export default {
                                         <div class="col-12 col-sm-9 col-md-10 col-xxl-10">
                                             <div class="badge bg-success text-wrap align-items-center rounded-pill">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-check" viewBox="0 0 16 16">
-                                                    <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm1.679-4.493-1.335 2.226a.75.75 0 0 1-1.174.144l-.774-.773a.5.5 0 0 1 .708-.708l.547.548 1.17-1.951a.5.5 0 1 1 .858.514ZM11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM8 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/>
-                                                    <path d="M8.256 14a4.474 4.474 0 0 1-.229-1.004H3c.001-.246.154-.986.832-1.664C4.484 10.68 5.711 10 8 10c.26 0 .507.009.74.025.226-.341.496-.65.804-.918C9.077 9.038 8.564 9 8 9c-5 0-6 3-6 4s1 1 1 1h5.256Z"/>
+                                                    <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm1.679-4.493-1.335 2.226a.75.75 0 0 1-1.174.144l-.774-.773a.5.5 0 0 1 .708-.708l.547.548 1.17-1.951a.5.5 0 1 1 .858.514ZM11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM8 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
+                                                    <path d="M8.256 14a4.474 4.474 0 0 1-.229-1.004H3c.001-.246.154-.986.832-1.664C4.484 10.68 5.711 10 8 10c.26 0 .507.009.74.025.226-.341.496-.65.804-.918C9.077 9.038 8.564 9 8 9c-5 0-6 3-6 4s1 1 1 1h5.256Z" />
                                                 </svg>
                                                 {{ acc.approved }}
                                             </div>
@@ -1661,7 +1734,7 @@ export default {
                                         <div class="col-12 col-sm-3 col-md-2 col-xxl-2">
                                             <div class="badge bg-secondary text-wrap align-items-center rounded-pill w-100">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person" viewBox="0 0 16 16">
-                                                    <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4Zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10Z"/>
+                                                    <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4Zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10Z" />
                                                 </svg>
                                                 {{ acc.compose.author.name }}
                                             </div>
@@ -1685,7 +1758,7 @@ export default {
                                                 <option selected :value="acc.compose.programs[0]"> {{ acc.compose.programs[0].name }} </option>
                                                 <option v-for="tmp in templatesToReplace" :value="tmp"> {{ tmp.name }} </option>
                                             </select>
-                                            <button v-if="approvedRequests[index].isStartedProcess && acc.changer === session().name " @click="openPreview(acc, acc.compose.programs[0])" type="button" data-bs-toggle="modal" data-bs-target="#PreviewModal" class="btn btn-info btn-sm">
+                                            <button v-if="approvedRequests[index].isStartedProcess && acc.changer === session().name" @click="openPreview(acc, acc.compose.programs[0])" type="button" data-bs-toggle="modal" data-bs-target="#PreviewModal" class="btn btn-info btn-sm">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-fill" viewBox="0 0 16 16">
                                                     <path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z" />
                                                     <path d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8zm8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" />
@@ -1787,8 +1860,7 @@ export default {
                                     </div>
                                     <div v-if="acc.isStartedProcess && (userProcess === acc.id || acc?.changer === session().name)" class="col-12 col-sm-12 col-md mb-1">
                                         <button @click="endProcessing(acc, 'acc')" type="button" class="btn btn-outline-secondary w-100">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                                fill="currentColor" class="bi bi-x-octagon" viewBox="0 0 16 16">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-octagon" viewBox="0 0 16 16">
                                                 <path d="M4.54.146A.5.5 0 0 1 4.893 0h6.214a.5.5 0 0 1 .353.146l4.394 4.394a.5.5 0 0 1 .146.353v6.214a.5.5 0 0 1-.146.353l-4.394 4.394a.5.5 0 0 1-.353.146H4.893a.5.5 0 0 1-.353-.146L.146 11.46A.5.5 0 0 1 0 11.107V4.893a.5.5 0 0 1 .146-.353L4.54.146zM5.1 1 1 5.1v5.8L5.1 15h5.8l4.1-4.1V5.1L10.9 1H5.1z" />
                                                 <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z" />
                                             </svg>
@@ -1816,8 +1888,7 @@ export default {
                                     <div v-if="acc.isStartedProcess && (userProcess === acc.id || acc?.changer === session().name)" class="col-12 col-sm-12 col-md mb-1">
                                         <button @click="triggerModal('delete', acc, index)" type="button" class="btn btn-outline-danger w-100">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3" viewBox="0 0 16 16">
-                                                <path
-                                                    d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5ZM11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1h-.995a.59.59 0 0 0-.01 0H11Zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5h9.916Zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47ZM8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z" />
+                                                <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5ZM11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1h-.995a.59.59 0 0 0-.01 0H11Zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5h9.916Zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47ZM8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z" />
                                             </svg>
                                             Удалить
                                         </button>
@@ -1825,8 +1896,7 @@ export default {
                                     </div>
                                     <div v-if="acc.isStartedProcess && (userProcess === acc.id || acc?.changer === session().name)" class="col-12 col-sm-12 col-md mb-1">
                                         <button @click="triggerModal('save', acc, index)" type="button" class="btn btn-success w-100">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                                fill="currentColor" class="bi bi-sd-card-fill" viewBox="0 0 16 16">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-sd-card-fill" viewBox="0 0 16 16">
                                                 <path d="M12.5 0H5.914a1.5 1.5 0 0 0-1.06.44L2.439 2.853A1.5 1.5 0 0 0 2 3.914V14.5A1.5 1.5 0 0 0 3.5 16h9a1.5 1.5 0 0 0 1.5-1.5v-13A1.5 1.5 0 0 0 12.5 0Zm-7 2.75a.75.75 0 0 1 .75.75v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 1 .75-.75Zm2 0a.75.75 0 0 1 .75.75v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 1 .75-.75Zm2.75.75v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 1 1.5 0Zm1.25-.75a.75.75 0 0 1 .75.75v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 1 .75-.75Z" />
                                             </svg>
                                             Применить

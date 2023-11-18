@@ -5,15 +5,10 @@
 <script>
 export default {
     props: ['src', 'load', 'itemId'],
-    data()
-    {
-        return {
-        }
+    data() {
+        return {};
     },
-    methods: {
-    },
-    mounted()
-    {
-    }
-}
+    methods: {},
+    mounted() {},
+};
 </script>
