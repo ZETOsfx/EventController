@@ -1,7 +1,7 @@
 require('dotenv').config();
 
-const jwt = require("jsonwebtoken");
-const argon2 = require("argon2");
+const jwt = require('jsonwebtoken');
+const argon2 = require('argon2');
 
 const { User, Role, Note, User_Note } = require('../../models');
 
@@ -11,16 +11,14 @@ const { User, Role, Note, User_Note } = require('../../models');
  *
  * @package src/services
  */
-class AuthService
-{
+class AuthService {
     /**
      * Основной метод авторизации
      *
      * @param params Входные POST параметры
      * @return object Данные авторизованного аккаунта
      */
-    async signIn(params)
-    {
+    async signIn(params) {
         const { login, password } = params?.body;
 
         const user = await User.findOne({
@@ -74,7 +72,7 @@ class AuthService
             },
             process.env.TOKEN_KEY,
             {
-                expiresIn: "2h",
+                expiresIn: '2h',
             }
         );
 

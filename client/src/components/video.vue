@@ -5,23 +5,16 @@
 <script>
 export default {
     props: ['src', 'id'],
-    data()
-    {
-        return {
-        }
+    data() {
+        return {};
     },
-    methods: {
-    },
-    mounted()
-    {
+    methods: {},
+    mounted() {
         var _self = this;
-        this.emitter.on('change', function (id)
-        {
-            if (id === _self.id)
-                document.getElementById("v" + _self.id).play()
-            else
-                document.getElementById("v" + _self.id).pause()
+        this.emitter.on('change', function (id) {
+            if (id === _self.id) document.getElementById('v' + _self.id).play();
+            else document.getElementById('v' + _self.id).pause();
         });
-    }
-}
+    },
+};
 </script>

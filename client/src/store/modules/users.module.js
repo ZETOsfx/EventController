@@ -1,34 +1,29 @@
-import { userService } from "../../services/user.service";
+import { userService } from '../../services/user.service';
 
 export const users = {
     namespaced: true,
     state: {
-        all: {}
+        all: {},
     },
     actions: {
-        getAll({ commit })
-        {
+        getAll({ commit }) {
             commit('getAllRequest');
 
-            userService.getAll()
-                .then(
-                    users => commit('getAllSuccess', users),
-                    error => commit('getAllFailure', error)
-                );
-        }
+            userService.getAll().then(
+                users => commit('getAllSuccess', users),
+                error => commit('getAllFailure', error)
+            );
+        },
     },
     mutations: {
-        getAllRequest(state)
-        {
+        getAllRequest(state) {
             state.all = { loading: true };
         },
-        getAllSuccess(state, users)
-        {
+        getAllSuccess(state, users) {
             state.all = { items: users };
         },
-        getAllFailure(state, error)
-        {
+        getAllFailure(state, error) {
             state.all = { error };
-        }
-    }
-}
+        },
+    },
+};

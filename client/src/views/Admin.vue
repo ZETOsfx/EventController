@@ -1,14 +1,13 @@
 <script>
 export default {
     inject: ['session', 'socket', 'options', 'toast', 'clickBlock'],
-    data()
-    {
+    data() {
         return {
             process_started: false,
 
             users: [],
-            volumes: ["editor", "moderator", "manager", "admin"],
-            roles: ["Редактор", "Модератор", "Менеджер", "Администратор"],
+            volumes: ['editor', 'moderator', 'manager', 'admin'],
+            roles: ['Редактор', 'Модератор', 'Менеджер', 'Администратор'],
 
             isChanged: false,
             forModal: {
@@ -19,23 +18,21 @@ export default {
             saveProfileModal: {},
             deleteUserModal: {},
 
-            addForm: { name: '', login: '', role: '', password: '', checkpass: '' }
-        }
+            addForm: { name: '', login: '', role: '', password: '', checkpass: '' },
+        };
     },
     methods: {
         /**
          * Соединение по WebSocket
          */
-        async connect()
-        {
+        async connect() {
             //
         },
 
         /**
          * Список профилей
          */
-        async getUsers()
-        {
+        async getUsers() {
             this.saveProfileModal = new bootstrap.Modal(document.getElementById('ModalSaveProfile'));
             this.deleteUserModal = new bootstrap.Modal(document.getElementById('ModalDeleteProfile'));
 
@@ -43,7 +40,7 @@ export default {
                 method: 'GET',
                 headers: new Headers({
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json',
+                    Accept: 'application/json',
                     'Access-Control-Allow-Origin': '*',
                     'x-access-token': JSON.parse(localStorage.getItem('user')).token,
                 }),
@@ -65,12 +62,11 @@ export default {
 
         /**
          * Открытие модального окна в зависимости от действия
-         * 
+         *
          * @param {*} index Индекс аккаунта в списке
          * @param {*} action Действие администратора
          */
-        async triggerModal(index, action)
-        {
+        async triggerModal(index, action) {
             this.forModal.index = index;
             this.forModal.profile = this.users[index].name;
 
@@ -90,8 +86,7 @@ export default {
         /**
          * Добавить новый профиль
          */
-        async addUser()
-        {
+        async addUser() {
             if (this.addForm.name.length > 16) {
                 this.toast('error', 'Длина отображаемого имени превышает ограничение: 16 символов.');
             } else if (this.addForm.login.length > 20) {
@@ -102,12 +97,15 @@ export default {
                     return;
                 }
 
-                let response = await fetch('/accounts/add', this.options('POST', {
-                    name: this.addForm.name,
-                    login: this.addForm.login,
-                    password: this.addForm.password,
-                    role: this.addForm.role,
-                }));
+                let response = await fetch(
+                    '/accounts/add',
+                    this.options('POST', {
+                        name: this.addForm.name,
+                        login: this.addForm.login,
+                        password: this.addForm.password,
+                        role: this.addForm.role,
+                    })
+                );
 
                 response = await response.json();
 
@@ -128,11 +126,10 @@ export default {
 
         /**
          * Редактирование данных аккаунта
-         * 
+         *
          * @param index Индекс в списке аккаунтов
          */
-        async changeUser(index)
-        {
+        async changeUser(index) {
             if (!this.process_started) {
                 this.users[index].lock = false;
                 this.process_started = true;
@@ -143,11 +140,10 @@ export default {
 
         /**
          * Сохранить изменения после редактирования данных аккаунта
-         * 
+         *
          * @param modalData Данные для модального окна
          */
-        async saveChanges(modalData)
-        {
+        async saveChanges(modalData) {
             let index = modalData.index;
 
             if (this.users[index].name.length > 16) {
@@ -156,18 +152,21 @@ export default {
                 this.toast('error', 'Длина логина превышает ограничение: 20 символов.');
             } else {
                 if (this.isChanged) {
-                    if (this.users[index].password.length > 0 && this.users[index].checkpass === this.users[index].password) {
+                    if (this.users[index].password.length > 0 && this.users[index].checkpass !== this.users[index].password) {
                         this.toast('error', 'Введенные пароли не совпадают.');
                         return;
                     }
 
-                    let response = await fetch('/accounts/update', this.options('POST', {
-                        id: this.users[index].id,
-                        name: this.users[index].name,
-                        login: this.users[index].login,
-                        role: this.users[index].role,
-                        password: this.users[index].password,
-                    }));
+                    let response = await fetch(
+                        '/accounts/update',
+                        this.options('POST', {
+                            id: this.users[index].id,
+                            name: this.users[index].name,
+                            login: this.users[index].login,
+                            role: this.users[index].role,
+                            password: this.users[index].password,
+                        })
+                    );
                     response = await response.json();
 
                     if (response.status !== 'success') {
@@ -188,20 +187,22 @@ export default {
 
         /**
          * Удалить аккаунт
-         * 
+         *
          * @param modalData Данные для модального окна
          */
-        async deleteUser(modalData)
-        {
+        async deleteUser(modalData) {
             let index = modalData.index;
 
-            let response = await fetch('/accounts/delete', this.options('DELETE', {
-                id: this.users[index].id
-            }));
+            let response = await fetch(
+                '/accounts/delete',
+                this.options('DELETE', {
+                    id: this.users[index].id,
+                })
+            );
 
             response = await response.json();
 
-            if (response.status === 'success') {
+            if (response.status !== 'success') {
                 this.toast('error', response.data);
                 return;
             }
@@ -213,12 +214,11 @@ export default {
         },
     },
 
-    async mounted()
-    {
+    async mounted() {
         await this.connect();
         await this.getUsers();
-    }
-}
+    },
+};
 </script>
 
 <template>
@@ -228,14 +228,15 @@ export default {
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h1 class="modal-title fs-5" id="exampleModalLabel"> Подтверждение удаления профиля </h1>
+                        <h1 class="modal-title fs-5" id="exampleModalLabel">Подтверждение удаления профиля</h1>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        Вы собираетесь удалить профиль <i>@{{ this.forModal.profile }}</i> <br> Вы уверены?
+                        Вы собираетесь удалить профиль <i>@{{ this.forModal.profile }}</i> <br />
+                        Вы уверены?
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"> Отмена </button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
                         <button name="id" form="del<%=i%>" type="submit" @click="deleteUser(this.forModal)" class="btn btn-danger">Удалить</button>
                     </div>
                 </div>
@@ -247,14 +248,15 @@ export default {
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h1 class="modal-title fs-5" id="exampleModalLabel"> Подтвердить изменение данных профиля </h1>
+                        <h1 class="modal-title fs-5" id="exampleModalLabel">Подтвердить изменение данных профиля</h1>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        Вы собираетесь изменить профиль <i>@{{ this.forModal.profile }}</i> <br> Вы уверены?
+                        Вы собираетесь изменить профиль <i>@{{ this.forModal.profile }}</i> <br />
+                        Вы уверены?
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"> Отмена </button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
                         <button @click="saveChanges(this.forModal)" type="button" class="btn btn-success" data-bs-dismiss="modal">Сохранить</button>
                     </div>
                 </div>
@@ -262,7 +264,7 @@ export default {
         </div>
 
         <div class="container">
-            <h6 class="text mt-4"> Администрирование </h6>
+            <h6 class="text mt-4">Администрирование</h6>
             <div class="content">
                 <!-- Вкладки -->
                 <ul class="nav nav-pills" id="pills-tab" role="tablist">
@@ -292,16 +294,14 @@ export default {
                     <div class="tab-pane fade show active" id="pills-profiles" role="tabpanel" aria-labelledby="pills-profiles-tab" tabindex="0">
                         <div class="introduce">
                             <div v-for="(user, index) in this.users">
-                                <div class="row gy-2 gx-2 align-items-center" style="margin-top: 3px;">
+                                <div class="row gy-2 gx-2 align-items-center" style="margin-top: 3px">
                                     <!-- ОТОБРАЖАЕМОЕ ИМЯ -->
                                     <div @click="this.clickBlock(this.users[index].lock)" class="col-12 col-md-6 col-lg-4 col-xl-2">
                                         <input type="text" class="form-control" name="name" @change="this.isChanged = true" v-model="this.users[index].name" :disabled="this.users[index].lock" />
                                     </div>
                                     <!-- РЕДАКТИРОВАТЬ -->
                                     <div v-if="user.lock" class="col-12 col-md-6 col-lg-4 col-xl">
-                                        <button @click="changeUser(index)" class="btn btn-outline-secondary">
-                                            Редактировать
-                                        </button>
+                                        <button @click="changeUser(index)" class="btn btn-outline-secondary">Редактировать</button>
                                     </div>
                                     <!-- ЛОГИН -->
                                     <div v-if="!user.lock" class="col-12 col-md-6 col-lg-4 col-xl">
@@ -310,7 +310,7 @@ export default {
                                     <!-- РОЛЬ -->
                                     <div v-if="!user.lock && user.name !== this.session().name" class="col-12 col-lg-4 col-xl">
                                         <select v-model="this.users[index].role" @change="this.isChanged = true" class="form-select" name="role" id="role">
-                                            <option v-for="(vol, index) in this.volumes" :value="vol" :selected="user.role === vol"> {{ this.roles[index] }} </option>
+                                            <option v-for="(vol, index) in this.volumes" :value="vol" :selected="user.role === vol">{{ this.roles[index] }}</option>
                                         </select>
                                     </div>
                                     <!-- НОВЫЙ ПАРОЛЬ -->
@@ -331,13 +331,13 @@ export default {
                                     </div>
                                     <!-- УДАЛИТЬ -->
                                     <div v-if="!user.lock" class="col-6 col-lg-2 col-xl">
-                                        <button v-if="!(this.users[index].name === this.session().name)" @click="this.triggerModal(index, 'del')" type="button" class="btn btn-outline-danger w-100"> Удалить </button>
+                                        <button v-if="!(this.users[index].name === this.session().name)" @click="this.triggerModal(index, 'del')" type="button" class="btn btn-outline-danger w-100">Удалить</button>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Форма добавления -->
-                            <div class="row gy-2 gx-2 align-items-center" style="margin-top: 3px;">
+                            <div class="row gy-2 gx-2 align-items-center" style="margin-top: 3px">
                                 <div class="col-12 col-md-6 col-lg-4 col-xl-2">
                                     <input type="text" class="form-control" id="name" name="name" placeholder="Отображаемое имя" readonly v-model="this.addForm.name" onfocus="this.removeAttribute('readonly')" />
                                 </div>
@@ -346,11 +346,11 @@ export default {
                                 </div>
                                 <div class="col-12 col-lg-4 col-xl">
                                     <select v-model="this.addForm.role" class="form-select" name="role" id="role">
-                                        <option value='' selected="">- Роль -</option>
-                                        <option value="editor">Редактор </option>
-                                        <option value="moderator">Модератор </option>
-                                        <option value="manager">Менеджер </option>
-                                        <option value="admin">Администратор </option>
+                                        <option value="" selected="">- Роль -</option>
+                                        <option value="editor">Редактор</option>
+                                        <option value="moderator">Модератор</option>
+                                        <option value="manager">Менеджер</option>
+                                        <option value="admin">Администратор</option>
                                     </select>
                                 </div>
                                 <div class="col-12 col-md-6 col-lg-4 col-xl">
@@ -400,25 +400,23 @@ export default {
                                     <button class="nav-link" id="v-pills-managers-tab" data-bs-toggle="pill" data-bs-target="#v-pills-managers" type="button" role="tab" aria-controls="v-pills-managers" aria-selected="false">Менеджеры</button>
                                 </div>
                                 <!-- СОДЕРЖИМОЕ ВКЛАДОК -->
-                                <div class="tab-content col-12 col-md ps-0  mt-2" id="v-pills-tabContent">
+                                <div class="tab-content col-12 col-md ps-0 mt-2" id="v-pills-tabContent">
                                     <!-- СОДЕРЖИМОЕ АДМИНИСТРАТОРЫ -->
                                     <div class="tab-pane fade show active" id="v-pills-admins" role="tabpanel" aria-labelledby="v-pills-admins-tab" tabindex="0">
                                         <ul class="list-group">
                                             <li class="list-group-item">
                                                 <div class="row g-2">
                                                     <div class="col-12 col-md-7 col-lg-6 col-xl-5">
-                                                        <input type="text" class="form-control" id="name" name="name" value="Пользователь 1" disabled readonly>
+                                                        <input type="text" class="form-control" id="name" name="name" value="Пользователь 1" disabled readonly />
                                                     </div>
-                                                    <div class="col-12 m-1">
-                                                        Доступные экраны для работы в системе:
-                                                    </div>
+                                                    <div class="col-12 m-1">Доступные экраны для работы в системе:</div>
                                                     <div class="row row-cols-auto">
                                                         <div class="m-0 ms-2 p-0 b-0 mt-1">
-                                                            <input type="checkbox" class="btn-check col-sm" id="btn-check-1" checked>
+                                                            <input type="checkbox" class="btn-check col-sm" id="btn-check-1" checked />
                                                             <label class="btn btn-outline-success" for="btn-check-1">Кафедра К3</label>
                                                         </div>
                                                         <div class="m-0 ms-2 p-0 b-0 mt-1">
-                                                            <input type="checkbox" class="btn-check col-sm" id="btn-check-2">
+                                                            <input type="checkbox" class="btn-check col-sm" id="btn-check-2" />
                                                             <label class="btn btn-outline-success" for="btn-check-2">МФ TV HALL</label>
                                                         </div>
                                                     </div>
@@ -428,18 +426,16 @@ export default {
                                             <li class="list-group-item">
                                                 <div class="row g-2">
                                                     <div class="col-12 col-md-7 col-lg-6 col-xl-5">
-                                                        <input type="text" class="form-control" id="name" name="name" value="Пользователь 2" disabled readonly>
+                                                        <input type="text" class="form-control" id="name" name="name" value="Пользователь 2" disabled readonly />
                                                     </div>
-                                                    <div class="col-12 m-1">
-                                                        Доступные экраны для работы в системе:
-                                                    </div>
+                                                    <div class="col-12 m-1">Доступные экраны для работы в системе:</div>
                                                     <div class="row row-cols-auto">
                                                         <div class="m-0 ms-2 p-0 b-0 mt-1">
-                                                            <input type="checkbox" class="btn-check col-sm" id="btn-check-3" checked>
+                                                            <input type="checkbox" class="btn-check col-sm" id="btn-check-3" checked />
                                                             <label class="btn btn-outline-success" for="btn-check-3">Кафедра К3</label>
                                                         </div>
                                                         <div class="m-0 ms-2 p-0 b-0 mt-1">
-                                                            <input type="checkbox" class="btn-check col-sm" id="btn-check-4">
+                                                            <input type="checkbox" class="btn-check col-sm" id="btn-check-4" />
                                                             <label class="btn btn-outline-success" for="btn-check-4">МФ TV HALL</label>
                                                         </div>
                                                     </div>
@@ -454,12 +450,9 @@ export default {
                                             <li class="list-group-item">
                                                 <div class="row g-2">
                                                     <div class="col-12">
-                                                        <input type="text" class="form-control" id="name" name="name" value="Нет доступных пользователей" disabled readonly>
+                                                        <input type="text" class="form-control" id="name" name="name" value="Нет доступных пользователей" disabled readonly />
                                                     </div>
-                                                    <div class="col-12 m-1">
-                                                        Добавьте хотя бы одного пользователя в систему с данной ролью для
-                                                        настройки прав доступа к экранам.
-                                                    </div>
+                                                    <div class="col-12 m-1">Добавьте хотя бы одного пользователя в систему с данной ролью для настройки прав доступа к экранам.</div>
                                                 </div>
                                             </li>
                                         </ul>
@@ -470,12 +463,9 @@ export default {
                                             <li class="list-group-item">
                                                 <div class="row g-2">
                                                     <div class="col-12">
-                                                        <input type="text" class="form-control" id="name" name="name" value="Нет доступных пользователей" disabled readonly>
+                                                        <input type="text" class="form-control" id="name" name="name" value="Нет доступных пользователей" disabled readonly />
                                                     </div>
-                                                    <div class="col-12 m-1">
-                                                        Добавьте хотя бы одного пользователя в систему с данной ролью для
-                                                        настройки прав доступа к экранам.
-                                                    </div>
+                                                    <div class="col-12 m-1">Добавьте хотя бы одного пользователя в систему с данной ролью для настройки прав доступа к экранам.</div>
                                                 </div>
                                             </li>
                                         </ul>
@@ -486,12 +476,9 @@ export default {
                                             <li class="list-group-item">
                                                 <div class="row g-2">
                                                     <div class="col-12">
-                                                        <input type="text" class="form-control" id="name" name="name" value="Нет доступных пользователей" disabled readonly>
+                                                        <input type="text" class="form-control" id="name" name="name" value="Нет доступных пользователей" disabled readonly />
                                                     </div>
-                                                    <div class="col-12 m-1">
-                                                        Добавьте хотя бы одного пользователя в систему с данной ролью для
-                                                        настройки прав доступа к экранам.
-                                                    </div>
+                                                    <div class="col-12 m-1">Добавьте хотя бы одного пользователя в систему с данной ролью для настройки прав доступа к экранам.</div>
                                                 </div>
                                             </li>
                                         </ul>
@@ -516,10 +503,10 @@ export default {
 
                         <div class="row">
                             <div class="col-12 col-md-6 col-lg-4 col-xl-3 mt-2">
-                                <input type="email" class="form-control" placeholder="Адрес почты">
+                                <input type="email" class="form-control" placeholder="Адрес почты" />
                             </div>
                             <div class="col-12 col-md-6 col-lg-4 col-xl-3 mt-2">
-                                <input type="email" class="form-control" placeholder="Подтверждение адреса почты">
+                                <input type="email" class="form-control" placeholder="Подтверждение адреса почты" />
                             </div>
                         </div>
 
@@ -527,28 +514,20 @@ export default {
                             <div class="col-12 col-lg-8 col-xl-6">
                                 <ul class="list-group">
                                     <li class="list-group-item d-flex align-items-center">
-                                        <input class="form-check-input me-1 col-auto" type="checkbox" id="mail-1">
-                                        <label class="form-check-label ms-1 stretched-link col" for="mail-1">
-                                            Утверждение / Отклонение отправленной вами программы
-                                        </label>
+                                        <input class="form-check-input me-1 col-auto" type="checkbox" id="mail-1" />
+                                        <label class="form-check-label ms-1 stretched-link col" for="mail-1"> Утверждение / Отклонение отправленной вами программы </label>
                                     </li>
                                     <li class="list-group-item d-flex align-items-center">
-                                        <input class="form-check-input me-1 col-auto" type="checkbox" id="mail-2">
-                                        <label class="form-check-label ms-1 stretched-link col" for="mail-2">
-                                            Получение новых объявлений, отображаемых на трансляции
-                                        </label>
+                                        <input class="form-check-input me-1 col-auto" type="checkbox" id="mail-2" />
+                                        <label class="form-check-label ms-1 stretched-link col" for="mail-2"> Получение новых объявлений, отображаемых на трансляции </label>
                                     </li>
                                     <li class="list-group-item d-flex align-items-center">
-                                        <input class="form-check-input me-1 col-auto" type="checkbox" id="mail-3">
-                                        <label class="form-check-label ms-1 stretched-link col" for="mail-3">
-                                            Получение новых объявлений, видимых только пользователям системы
-                                        </label>
+                                        <input class="form-check-input me-1 col-auto" type="checkbox" id="mail-3" />
+                                        <label class="form-check-label ms-1 stretched-link col" for="mail-3"> Получение новых объявлений, видимых только пользователям системы </label>
                                     </li>
                                     <li class="list-group-item d-flex align-items-center">
-                                        <input class="form-check-input me-1 col-auto" type="checkbox" id="mail-4">
-                                        <label class="form-check-label ms-1 stretched-link col" for="mail-4">
-                                            Получение новых запросов на утверждение
-                                        </label>
+                                        <input class="form-check-input me-1 col-auto" type="checkbox" id="mail-4" />
+                                        <label class="form-check-label ms-1 stretched-link col" for="mail-4"> Получение новых запросов на утверждение </label>
                                     </li>
                                 </ul>
                             </div>
@@ -565,8 +544,7 @@ export default {
                     </div>
 
                     <!-- ЛОГИ -->
-                    <div class="tab-pane fade" id="pills-logs" role="tabpanel" aria-labelledby="pills-logs-tab"
-                         tabindex="0">
+                    <div class="tab-pane fade" id="pills-logs" role="tabpanel" aria-labelledby="pills-logs-tab" tabindex="0">
                         <!-- <ul v-for="(log, index) in logData" class="list-group">
                         for (var i in logData) {
                             try { logData[i][0].username;
@@ -725,11 +703,9 @@ export default {
                         }
 
                     </ul> -->
-
                     </div>
                     <!-- КОНЕЦ: Содержимое вкладок -->
                 </div>
-
             </div>
         </div>
     </div>

@@ -9,16 +9,14 @@ const messageService = require('./MessageService');
  *
  * @package src/services
  */
-class RequestService
-{
+class RequestService {
     /**
      * Получить все существующие запросы в системе
      *
      * @param params Входные GET параметры
      * @return json Список всех запросов в системе
      */
-    async getAll(params)
-    {
+    async getAll(params) {
         const { user } = params;
         this.checkRole(user.role);
 
@@ -48,17 +46,8 @@ class RequestService
             },
             attributes: ['id', 'isAccepted', 'approved', 'changer', 'isActive', 'inProcessing'],
             order: [
-                [
-                    { model: Compose, as: 'compose' },
-                    { model: Program, as: 'programs' },
-                    'timeToSwap', 'ASC'
-                ],
-                [
-                    { model: Compose, as: 'compose' },
-                    { model: Program, as: 'programs' },
-                    { model: Event, as: 'events' },
-                    'order', 'ASC'
-                ],
+                [{ model: Compose, as: 'compose' }, { model: Program, as: 'programs' }, 'timeToSwap', 'ASC'],
+                [{ model: Compose, as: 'compose' }, { model: Program, as: 'programs' }, { model: Event, as: 'events' }, 'order', 'ASC'],
             ],
         });
     }
@@ -98,17 +87,8 @@ class RequestService
             },
             attributes: ['id', 'composeId', 'isAccepted', 'approved', 'changer', 'isActive', 'inProcessing'],
             order: [
-                [
-                    { model: Compose, as: 'compose' },
-                    { model: Program, as: 'programs' },
-                    'timeToSwap', 'ASC'
-                ],
-                [
-                    { model: Compose, as: 'compose' },
-                    { model: Program, as: 'programs' },
-                    { model: Event, as: 'events' },
-                    'order', 'ASC'
-                ],
+                [{ model: Compose, as: 'compose' }, { model: Program, as: 'programs' }, 'timeToSwap', 'ASC'],
+                [{ model: Compose, as: 'compose' }, { model: Program, as: 'programs' }, { model: Event, as: 'events' }, 'order', 'ASC'],
             ],
         });
     }
@@ -122,8 +102,7 @@ class RequestService
      * @param params Входные POST параметры
      * @return number Флаг успешной отправки
      */
-    async addOne(params)
-    {
+    async addOne(params) {
         const { user } = params;
 
         if (!['admin', 'moderator', 'editor'].includes(user.role)) {
@@ -149,17 +128,20 @@ class RequestService
             throw new Error('Данная композиция уже находится в модерации');
         }
 
-        const compose = await Compose.update({
-            name: name,
-            comment: description,
-            date: date,
-            status: 'sent',
-        }, {
-            where: {
-                id: id,
-                authorId: user.userId,
+        const compose = await Compose.update(
+            {
+                name: name,
+                comment: description,
+                date: date,
+                status: 'sent',
             },
-        });
+            {
+                where: {
+                    id: id,
+                    authorId: user.userId,
+                },
+            }
+        );
 
         if (compose[0] === 0) {
             throw new Error('Некорректный ID композиции');
@@ -196,8 +178,7 @@ class RequestService
      * @param params Входные POST-параметры
      * @returns {Promise<void>}
      */
-    async recall(params)
-    {
+    async recall(params) {
         const { user } = params;
 
         if (!['admin', 'moderator', 'editor'].includes(user.role)) {
@@ -212,14 +193,17 @@ class RequestService
             },
         });
 
-        return Compose.update({
-            status: 'created',
-            message: null,
-        }, {
-            where: {
-                id: id,
+        return Compose.update(
+            {
+                status: 'created',
+                message: null,
             },
-        })[0];
+            {
+                where: {
+                    id: id,
+                },
+            }
+        )[0];
     }
 
     /**
@@ -235,8 +219,7 @@ class RequestService
      * @param params Входные POST параметры
      * @return Promise
      */
-    async updateOne(params)
-    {
+    async updateOne(params) {
         const { user } = params;
         this.checkRole(user.role);
 
@@ -280,18 +263,34 @@ class RequestService
                 addressedToName: request.compose.author.name,
             });
 
-            return Compose.update({
-                status: 'rejected',
-                message: operation['rejected'],
-            }, {
-                where: {
-                    id: request.compose.id,
+            return Compose.update(
+                {
+                    status: 'rejected',
+                    message: operation['rejected'],
                 },
-            })[0];
-        }
-        else {
+                {
+                    where: {
+                        id: request.compose.id,
+                    },
+                }
+            )[0];
+        } else {
             if (operation['changed']) {
                 const { forDate, programs, eventList, timingList } = operation['changed'];
+
+                if (!operation['approved']) {
+                    await Request.update(
+                        {
+                            inProcessing: false,
+                        },
+                        {
+                            where: {
+                                id: id,
+                            },
+                        }
+                    );
+                }
+
                 composeService.updateOne({
                     user: user,
                     body: {
@@ -304,15 +303,18 @@ class RequestService
                 });
             }
             if (operation['approved']) {
-                await Request.update({
-                    isAccepted: true,
-                    approved: user.name,
-                    inProcessing: false,
-                }, {
-                    where: {
-                        id: id,
+                await Request.update(
+                    {
+                        isAccepted: true,
+                        approved: user.name,
+                        inProcessing: false,
                     },
-                });
+                    {
+                        where: {
+                            id: id,
+                        },
+                    }
+                );
 
                 const systemUser = await User.findOne({
                     where: {
@@ -329,14 +331,17 @@ class RequestService
                     addressedToName: request.compose.author.name,
                 });
 
-                return Compose.update({
-                    status: 'approved',
-                    message: operation['approved'],
-                }, {
-                    where: {
-                        id: request.compose.id,
+                return Compose.update(
+                    {
+                        status: 'approved',
+                        message: operation['approved'],
                     },
-                })[0];
+                    {
+                        where: {
+                            id: request.compose.id,
+                        },
+                    }
+                )[0];
             }
         }
     }
@@ -353,8 +358,7 @@ class RequestService
      * @param params Входные POST параметры
      * @return Promise<Request> Установленный запрос
      */
-    async setActive(params)
-    {
+    async setActive(params) {
         const { user } = params;
         this.checkRole(user.role);
 
@@ -378,10 +382,6 @@ class RequestService
             },
         });
 
-        if (!(newRequest instanceof Request)) {
-            throw new Error('Некорректный запрос');
-        }
-
         if (oldRequest instanceof Request) {
             switch (action.type) {
                 case 'delete':
@@ -397,47 +397,62 @@ class RequestService
                 case 'queue':
                     const targetDate = action.with;
 
-                    await Request.update({
-                        isActive: false,
-                    }, {
-                        where: {
-                            isActive: true,
+                    await Request.update(
+                        {
+                            isActive: false,
                         },
-                    });
-                    await Compose.update({
-                        date: targetDate,
-                        status: 'approved',
-                    }, {
-                        where: {
-                            id: oldRequest.composeId,
+                        {
+                            where: {
+                                isActive: true,
+                            },
+                        }
+                    );
+                    await Compose.update(
+                        {
+                            date: targetDate,
+                            status: 'approved',
                         },
-                    });
-                    await Program.update({
-                        isActive: false,
-                    }, {
-                        where: {
-                            isActive: true,
+                        {
+                            where: {
+                                id: oldRequest.composeId,
+                            },
+                        }
+                    );
+                    await Program.update(
+                        {
+                            isActive: false,
                         },
-                    });
+                        {
+                            where: {
+                                isActive: true,
+                            },
+                        }
+                    );
                     break;
                 case 'return':
                     const message = action.with;
 
-                    await Compose.update({
-                        status: 'returned',
-                        message: message,
-                    }, {
-                        where: {
-                            id: oldRequest.composeId,
+                    await Compose.update(
+                        {
+                            status: 'returned',
+                            message: message,
                         },
-                    });
-                    await Program.update({
-                        isActive: false,
-                    }, {
-                        where: {
-                            isActive: true,
+                        {
+                            where: {
+                                id: oldRequest.composeId,
+                            },
+                        }
+                    );
+                    await Program.update(
+                        {
+                            isActive: false,
                         },
-                    });
+                        {
+                            where: {
+                                isActive: true,
+                            },
+                        }
+                    );
 
                     const systemUser = await User.findOne({
                         where: {
@@ -460,29 +475,39 @@ class RequestService
                     });
                     break;
                 default:
-                    throw new Error('Некорректный запрос: действие не определено')
+                    throw new Error('Некорректный запрос: действие не определено');
             }
         }
 
-        await Request.update({
-            isActive: true,
-        }, {
-            where: {
-                id: newRequest.id,
-            },
-        });
-        await Compose.update({
-            status: 'active',
-        }, {
-            where: {
-                id: newRequest.composeId,
-            },
-        });
-
-        const between = (time, left, right) =>
-        {
-            return ([time, left, right].sort()[1] === time) || (time === left);
+        /** Broadcast cleared */
+        if (!(newRequest instanceof Request)) {
+            return null;
         }
+
+        await Request.update(
+            {
+                isActive: true,
+            },
+            {
+                where: {
+                    id: newRequest.id,
+                },
+            }
+        );
+        await Compose.update(
+            {
+                status: 'active',
+            },
+            {
+                where: {
+                    id: newRequest.composeId,
+                },
+            }
+        );
+
+        const between = (time, left, right) => {
+            return [time, left, right].sort()[1] === time || time === left;
+        };
 
         let date = new Date();
         let hh = date.getHours();
@@ -514,15 +539,17 @@ class RequestService
                     break;
                 }
             }
-            await Program.update({
-                isActive: true,
-            }, {
-                where: {
-                    id: newRequest.compose.programs[origin.indexOf(currentState)].id,
+            await Program.update(
+                {
+                    isActive: true,
                 },
-            });
-        }
-        else {
+                {
+                    where: {
+                        id: newRequest.compose.programs[origin.indexOf(currentState)].id,
+                    },
+                }
+            );
+        } else {
             let idActive = -1;
             for (let i = 0; i < newRequest.compose.programs.length - 1; i++) {
                 if (between(time, newRequest.compose.programs[i].timeToSwap, newRequest.compose.programs[i + 1].timeToSwap)) {
@@ -541,25 +568,27 @@ class RequestService
                 }
             }
 
-            await Program.update({
-                isActive: true,
-            }, {
-                where: {
-                    id: idActive,
+            await Program.update(
+                {
+                    isActive: true,
                 },
-            });
+                {
+                    where: {
+                        id: idActive,
+                    },
+                }
+            );
         }
         return this.getOne(id);
     }
 
     /**
-    * Получить данные активной программы в формате JSON (вывод на трансляцию)
-    *
-    * @return {Promise<*>} Список страниц для трансляции
-    */
-    async getActiveJSON()
-    {
-        const request = await Request.findOne({
+     * Получить транслируемую композицию
+     *
+     * @returns {Promise<Model>}
+     */
+    async getActiveRequest() {
+        return Request.findOne({
             nest: true,
             where: {
                 isActive: true,
@@ -582,16 +611,18 @@ class RequestService
                 },
                 attributes: ['id', 'name'],
             },
-            attributes: ['id'],
-            order: [
-                [
-                    { model: Compose, as: 'compose' },
-                    { model: Program, as: 'programs' },
-                    { model: Event, as: 'events' },
-                    'order', 'ASC'
-                ],
-            ],
+            attributes: ['id', 'updatedAt'],
+            order: [[{ model: Compose, as: 'compose' }, { model: Program, as: 'programs' }, { model: Event, as: 'events' }, 'order', 'ASC']],
         });
+    }
+
+    /**
+     * Получить данные активной программы в формате JSON (вывод на трансляцию)
+     *
+     * @return {Promise<*>} Список страниц для трансляции
+     */
+    async getActiveJSON() {
+        const request = await this.getActiveRequest();
 
         if (!(request instanceof Request)) {
             throw new Error('Трансляция пуста');
@@ -599,21 +630,31 @@ class RequestService
 
         let events = request.compose.programs[0].events;
         let eventsJson = [];
-        let datetimeOrder = (new Date()).getTime();
+
+        const currentDateTime = new Date();
+        const updatedAt = new Date(request.updatedAt);
+
+        let cycleDuration = 0;
+        for (let i in events) {
+            cycleDuration += events[i].time;
+        }
+
+        const mark = (Math.abs(currentDateTime - updatedAt) / 1000) % cycleDuration;
+        let dateTimeOrder = new Date(Date.now() - mark * 1000).getTime();
 
         for (let i in events) {
             eventsJson.push({
-                time: new Date(datetimeOrder),
+                time: new Date(dateTimeOrder),
                 type: events[i].type,
                 src: events[i].src,
             });
-            datetimeOrder += events[i].time * 1000;
+            dateTimeOrder += events[i].time * 1000;
         }
 
         eventsJson.push({
-            time: new Date(datetimeOrder),
-            type: "end",
-            src: "src",
+            time: new Date(dateTimeOrder),
+            type: 'end',
+            src: 'src',
         });
 
         return eventsJson;
@@ -625,8 +666,7 @@ class RequestService
      * @param params Входные POST параметры.
      * @return String Флаг успешной операции.
      */
-    async toggleProcess(params)
-    {
+    async toggleProcess(params) {
         const { user } = params;
         this.checkRole(user.role);
 
@@ -640,22 +680,28 @@ class RequestService
             attributes: ['composeId', 'isActive', 'isAccepted'],
         });
 
-        await Compose.update({
-            status: inProcessing ? 'processing' : (request.isActive ? 'active' : (request.isAccepted ? 'approved' : 'sent')),
-        }, {
-            where: {
-                id: request.composeId,
+        await Compose.update(
+            {
+                status: inProcessing ? 'processing' : request.isActive ? 'active' : request.isAccepted ? 'approved' : 'sent',
             },
-        });
+            {
+                where: {
+                    id: request.composeId,
+                },
+            }
+        );
 
-        return Request.update({
-            inProcessing: inProcessing,
-            changer: inProcessing ? user.name : null,
-        }, {
-            where: {
-                id: id,
+        return Request.update(
+            {
+                inProcessing: inProcessing,
+                changer: inProcessing ? user.name : null,
             },
-        });
+            {
+                where: {
+                    id: id,
+                },
+            }
+        );
     }
 
     /**
@@ -664,8 +710,7 @@ class RequestService
      * @param params Входные POST параметры
      * @returns {Promise<String>} Статус операции
      */
-    async endProcess(params)
-    {
+    async endProcess(params) {
         const { user } = params;
         this.checkRole(user.role);
 
@@ -687,7 +732,7 @@ class RequestService
                 id: request.id,
                 inProcessing: false,
             },
-        })
+        });
     }
 
     /**
@@ -695,8 +740,7 @@ class RequestService
      *
      * @param role Роль пользователя в системе
      */
-    checkRole(role)
-    {
+    checkRole(role) {
         if (!['admin', 'moderator'].includes(role)) {
             throw new Error('Недостаточно прав доступа');
         }
@@ -708,8 +752,7 @@ class RequestService
      * @param date Дата
      * @returns boolean Флаг наличия
      */
-    async hasRequestOnDate(screen, date)
-    {
+    async hasRequestOnDate(screen, date) {
         const request = await Request.findAll({
             where: {
                 screen: screen,
@@ -717,7 +760,7 @@ class RequestService
                 isAccepted: true,
             },
         });
-        return (request[0] instanceof Request);
+        return request[0] instanceof Request;
     }
 }
 

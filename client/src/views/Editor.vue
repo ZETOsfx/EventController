@@ -15,6 +15,7 @@ export default {
             editFormL: [],           // Обед (Lunch)
             customForms: [],         // Список форм редактирования для спец. шаблонов
             composeDetailsModal: {
+                programObj: {},
                 templateName: '',           // Имя предпросматриваемого шаблона
                 authorName: '',             // Автор этого самого шаблона
                 withChanges: false,         // Наличие изменений
@@ -28,6 +29,9 @@ export default {
             // ----- Canvas data ------
             reserveType: '',
             filter: '',
+            sortBy: [ 'none', 'asc' ],
+            files: {},
+            users: [],
             viewFiles: [],
             typeOfList: '',
             canvas: {},
@@ -116,29 +120,93 @@ export default {
         /**
          * Поиск в списке файлов
          * @param searchParam Параметры выборки
+         * @param sortBy Параметры сортировки
          */
-        search(searchParam)
+        search(searchParam, sortBy)
         {
-            if (searchParam === '') {
-                this.typeOfList = this.reserveType;
-                return;
-            }
+            this.filesImg = this.files.img;
+            this.filesClip = this.files.mov;
+
             if (this.typeOfList !== 'filtered') {
                 this.reserveType = this.typeOfList;
             }
+            if (searchParam === '') {
+                this.typeOfList = this.reserveType;
+            } else {
+                this.typeOfList = 'filtered';
+                this.viewFiles = [];
 
-            this.typeOfList = 'filtered';
-            this.viewFiles = [];
-
-            for (let i in this.filesImg) {
-                if (this.filesImg[i].name.includes(searchParam)) {
-                    this.viewFiles.push(this.filesImg[i]);
+                for (let i in this.filesImg) {
+                    if (this.filesImg[i].name.includes(searchParam) || searchParam === '') {
+                        this.viewFiles.push(this.filesImg[i]);
+                    }
+                }
+                for (let i in this.filesClip) {
+                    if (this.filesClip[i].name.includes(searchParam) || searchParam === '') {
+                        this.viewFiles.push(this.filesClip[i]);
+                    }
                 }
             }
-            for (let i in this.filesClip) {
-                if (this.filesClip[i].name.includes(searchParam)) {
-                    this.viewFiles.push(this.filesClip[i]);
+
+            switch (sortBy[0]) {
+                case 'name':
+                function sortFuncName(a, b) {
+                    if (a.name.toLowerCase() < b.name.toLowerCase()) {
+                        return -1;
+                    }
+                    if (a.name.toLowerCase() > b.name.toLowerCase()) {
+                        return 1;
+                    }
+                    return 0;
                 }
+                    this.viewFiles.sort(sortFuncName);
+                    this.filesImg.sort(sortFuncName);
+                    if (sortBy[0] !== 'none' && sortBy[1] === 'desc') {
+                        this.viewFiles.reverse();
+                        this.filesImg.reverse();
+                    }
+                    break;
+                case 'date':
+                function sortFuncDate(a, b) {
+                    if (a.createdAt < b.createdAt) {
+                        return -1;
+                    }
+                    if (a.createdAt > b.createdAt) {
+                        return 1;
+                    }
+                    return 0;
+                }
+                    this.viewFiles.sort(sortFuncDate);
+                    this.filesImg.sort(sortFuncDate);
+                    if (sortBy[0] !== 'none' && sortBy[1] === 'desc') {
+                        this.viewFiles.reverse();
+                        this.filesImg.reverse();
+                    }
+                    break;
+                case 'author':
+                    if (sortBy[1] !== '-') {
+                        this.viewFiles = this.viewFiles.filter(file => file.author.name === sortBy[1]);
+                        this.filesImg = this.filesImg.filter(file => file.author.name === sortBy[1]);
+                    }
+                    break;
+                case 'weight':
+                function sortFuncWeight(a, b) {
+                    if (a.author.name < b.author.name) {
+                        return -1;
+                    }
+                    if (a.author.name > b.author.name) {
+                        return 1;
+                    }
+                    return 0;
+                }
+                    this.viewFiles.sort(sortFuncWeight);
+                    this.filesImg.sort(sortFuncWeight);
+                    if (sortBy[0] !== 'none' && sortBy[1] === 'desc') {
+                        this.viewFiles.reverse();
+                        this.filesImg.reverse();
+                    }
+                    break;
+                default:
             }
         },
 
@@ -222,6 +290,12 @@ export default {
                     }
                 });
             }
+
+            this.files = {
+                img: this.filesImg,
+                mov: this.filesClip,
+            }
+
             let date_ob = new Date();
             let dd = ("0" + date_ob.getDate()).slice(-2);
             let mm = ("0" + (date_ob.getMonth() + 1)).slice(-2);
@@ -233,6 +307,18 @@ export default {
             document.getElementById('startDate').max = maxDate;
             document.getElementById('startDate').value = minDate;
             this.composeTargetDate = minDate;
+
+            let response = await fetch('/accounts', {
+                method: 'GET',
+                headers: new Headers({
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'x-access-token': JSON.parse(localStorage.getItem('user')).token,
+                }),
+            });
+            response = await response.json();
+            this.users = response.data;
         },
 
         /**
@@ -248,6 +334,7 @@ export default {
             for (let i in this.programs) {
                 if (this.programs[i].id === id) {
                     this.events = this.programs[i].events;
+                    this.composeDetailsModal.programObj =  this.programs[i];
                 }
             }
             this.openedProgramId = id;
@@ -735,7 +822,7 @@ export default {
             response = await response.json();
 
             if (response.status === 'success') {
-                this.toast('success', 'Скомпанованная программа была успешно удалена.');
+                this.toast('success', 'Скомпонованная программа была успешно удалена.');
                 await this.allTmp(false);
                 this.CMP_EDIT_STARTED = false;
             } else {
@@ -900,116 +987,179 @@ export default {
                         <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" />
                     </svg>
                 </span>
-                <input @keydown.enter="this.search(this.filter)" v-model="this.filter" type="text" class="form-control" placeholder="Введите имя файла" aria-describedby="addon-wrapping">
-                <button @click="this.search(this.filter)" class="btn btn-outline-secondary" type="button">Найти</button>
+                <input @keydown.enter="search(filter, sortBy)" v-model="filter" type="text" class="form-control" placeholder="Введите имя файла" aria-describedby="addon-wrapping">
+                <button @click="search(filter, sortBy)" class="btn btn-outline-secondary" type="button">Найти</button>
             </div>
             <div class="input-group flex-nowrap pt-2 pb-2 ps-3 pe-3">
-                <select class="form-select form-select-sm">
-                    <option value="0" selected>Имя</option>
-                    <option value="1">Дата</option>
-                    <option value="2">Автор</option>
+                <select v-model="sortBy[0]" class="form-select form-select-sm">
+                    <option value="none" @click="sortBy[1] = 'asc'" selected>Без фильтра</option>
+                    <option value="name" @click="sortBy[1] = 'asc'">Имя</option>
+                    <option value="date" @click="sortBy[1] = 'asc'">Дата</option>
+                    <option value="author" @click="sortBy[1] = '-'"> Автор </option>
+                    <option value="weight" @click="sortBy[1] = 'asc'">Размер</option>
                 </select>
-                <select class="form-select form-select-sm">
-                    <option value="0" selected>Возрастание</option>
-                    <option value="1">Убывание</option>
+                <select v-if="sortBy[0] !== 'author'" v-model="sortBy[1]" class="form-select form-select-sm">
+                    <option value="asc" selected>По возрастанию</option>
+                    <option value="desc">По убыванию</option>
+                </select>
+                <select v-if="sortBy[0] === 'author'" v-model="sortBy[1]" class="form-select form-select-sm">
+                    <option value="-" selected>Все</option>
+                    <option v-for="(user, index) in users" :value="user.name"> {{ user.name }} </option>
                 </select>
             </div>
             <div class="offcanvas-body pt-0">
                 <!-- ФИЛЬТР -->
-                <div v-if="typeOfList === 'filtered'">
+                <div v-if="typeOfList === 'filtered'" class="row row-cols-1 row-cols-sm-2 g-2">
                     <div v-for="file in this.viewFiles">
-                        <div class="card mb-2">
-                            <small class="card-header">
-                                <div class="row justify-content-between align-items-center">
-                                    <div class="col-auto align-items-center">
-                                        <p class="card-text m-0"> {{ file.author.name }}
-                                            <small class="text-body-secondary ms-1"> {{ file.isUnlimited ? 'Бессрочно' : file.expires }} </small>
-                                        </p>
+                        <div class="col">
+                            <div class="card h-100">
+                                <small class="card-header p-2">
+                                    <div class="row justify-content-between align-items-center">
+                                        <div class="col-auto align-items-center">
+                                            <p class="card-text m-0">
+                                                <div class="badge bg-secondary text-wrap align-items-center rounded-pill">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person" viewBox="0 0 16 16">
+                                                        <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4Zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10Z"/>
+                                                    </svg>
+                                                    {{ file.author.name }}
+                                                </div>
+                                            </p>
+                                        </div>
+                                        <div class="col-auto">
+                                            <a type="button" class="btn btn-outline-secondary btn-sm me-1" :href="file.src" target="_blank" rel="noopener noreferrer">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-fullscreen" viewBox="0 0 16 16">
+                                                    <path d="M1.5 1a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 0h4a.5.5 0 0 1 0 1h-4zM10 .5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 16 1.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5zM.5 10a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5zm15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5z" />
+                                                </svg>
+                                            </a>
+                                            <button @click="selectFile(file)" type="button" class="btn btn-success btn-sm">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-lg" viewBox="0 0 16 16">
+                                                    <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425a.247.247 0 0 1 .02-.022"/>
+                                                </svg>
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div class="col-auto">
-                                        <button type="button" class="btn btn-outline-secondary btn-sm me-1">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-fullscreen" viewBox="0 0 16 16">
-                                                <path d="M1.5 1a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 0h4a.5.5 0 0 1 0 1h-4zM10 .5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 16 1.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5zM.5 10a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5zm15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5z">
-                                                </path>
-                                            </svg>
-                                        </button>
-                                        <button @click="selectFile(file)" type="button" class="btn btn-success btn-sm">
-                                            Выбрать
-                                        </button>
+                                </small>
+                                <img :src="file.src" style="object-fit: cover; width: 100%; height: 100%; max-height: 140px;"  alt="" />
+                                <div class="card-body p-2">
+                                    <h6 class="card-title mb-1 mt-0 ms-0 me-0">{{ file.name + '.' + file.format }} </h6>
+                                    <div class="badge bg-info text-wrap align-items-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-fill" viewBox="0 0 16 16">
+                                            <path d="M4 0h5.293A1 1 0 0 1 10 .293L13.707 4a1 1 0 0 1 .293.707V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2zm5.5 1.5v2a1 1 0 0 0 1 1h2l-3-3z"/>
+                                        </svg>
+                                        {{ file.weight }}
+                                    </div>
+                                    <div class="badge bg-secondary text-wrap ms-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-calendar-check" viewBox="0 0 16 16">
+                                            <path d="M10.854 7.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 9.793l2.646-2.647a.5.5 0 0 1 .708 0z"/>
+                                            <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/>
+                                        </svg>
+                                        {{ file.isUnlimited ? 'Бессрочно' : file.expires }}
                                     </div>
                                 </div>
-                            </small>
-                            <img :src="file.src" style="object-fit: cover; width: 100%; height: 100%; max-height: 140px;" alt="">
-                            <div class="card-body">
-                                <h6 class="card-title m-0">{{ file.name + '.' + file.format }}
-                                    <small class="text-body-secondary ms-1"> ({{ file.weight }}) </small>
-                                </h6>
                             </div>
                         </div>
                     </div>
                 </div>
                 <!-- ИЗОБРАЖЕНИЯ -->
-                <div v-if="typeOfList === 'image'">
-                    <div v-for="file in filesImg">
-                        <div class="card mb-2">
-                            <small class="card-header">
-                                <div class="row justify-content-between align-items-center">
-                                    <div class="col-auto align-items-center">
-                                        <p class="card-text m-0"> {{ file.author.name }}
-                                            <small class="text-body-secondary ms-1"> {{ file.isUnlimited ? 'Бессрочно' : file.expires }} </small>
-                                        </p>
+                <div v-if="typeOfList === 'image'" class="row row-cols-1 row-cols-sm-2 g-2">
+                    <div v-for="(file, index) in filesImg">
+                        <div class="col">
+                            <div class="card h-100">
+                                <small class="card-header p-2">
+                                    <div class="row justify-content-between align-items-center">
+                                        <div class="col-auto align-items-center">
+                                            <p class="card-text m-0">
+                                                <div class="badge bg-secondary text-wrap align-items-center rounded-pill">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person" viewBox="0 0 16 16">
+                                                        <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4Zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10Z"/>
+                                                    </svg>
+                                                    {{ file.author.name }}
+                                                </div>
+                                            </p>
+                                        </div>
+                                        <div class="col-auto">
+                                            <a type="button" class="btn btn-outline-secondary btn-sm me-1" :href="file.src" target="_blank" rel="noopener noreferrer">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-fullscreen" viewBox="0 0 16 16">
+                                                    <path d="M1.5 1a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 0h4a.5.5 0 0 1 0 1h-4zM10 .5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 16 1.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5zM.5 10a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5zm15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5z" />
+                                                </svg>
+                                            </a>
+                                            <button @click="selectFile(file)" type="button" class="btn btn-success btn-sm">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-lg" viewBox="0 0 16 16">
+                                                    <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425a.247.247 0 0 1 .02-.022"/>
+                                                </svg>
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div class="col-auto">
-                                        <button type="button" class="btn btn-outline-secondary btn-sm me-1">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-fullscreen" viewBox="0 0 16 16">
-                                                <path d="M1.5 1a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 0h4a.5.5 0 0 1 0 1h-4zM10 .5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 16 1.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5zM.5 10a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5zm15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5z">
-                                                </path>
-                                            </svg>
-                                        </button>
-                                        <button @click="selectFile(file)" type="button" class="btn btn-success btn-sm">
-                                            Выбрать
-                                        </button>
+                                </small>
+                                <img :src="file.src" style="object-fit: cover; width: 100%; height: 100%; max-height: 140px;"  alt="" />
+                                <div class="card-body p-2">
+                                    <h6 class="card-title mb-1 mt-0 ms-0 me-0">{{ file.name + '.' + file.format }} </h6>
+                                    <div class="badge bg-info text-wrap align-items-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-fill" viewBox="0 0 16 16">
+                                            <path d="M4 0h5.293A1 1 0 0 1 10 .293L13.707 4a1 1 0 0 1 .293.707V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2zm5.5 1.5v2a1 1 0 0 0 1 1h2l-3-3z"/>
+                                        </svg>
+                                        {{ file.weight }}
+                                    </div>
+                                    <div class="badge bg-secondary text-wrap ms-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-calendar-check" viewBox="0 0 16 16">
+                                            <path d="M10.854 7.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 9.793l2.646-2.647a.5.5 0 0 1 .708 0z"/>
+                                            <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/>
+                                        </svg>
+                                        {{ file.isUnlimited ? 'Бессрочно' : file.expires }}
                                     </div>
                                 </div>
-                            </small>
-                            <img :src="file.src" style="object-fit: cover; width: 100%; height: 100%; max-height: 140px;" alt="">
-                            <div class="card-body">
-                                <h6 class="card-title m-0">{{ file.name + '.' + file.format }}
-                                    <small class="text-body-secondary ms-1"> ({{ file.weight }}) </small>
-                                </h6>
                             </div>
                         </div>
                     </div>
                 </div>
                 <!-- ВИДЕО -->
                 <div v-if="typeOfList === 'video'">
-                    <div v-for="file in filesClip">
-                        <div class="card mb-2">
-                            <small class="card-header">
-                                <div class="row justify-content-between align-items-center">
-                                    <div class="col-auto align-items-center">
-                                        <p class="card-text m-0">Малашин А.А.
-                                            <small class="text-body-secondary ms-1"> До: 01.04.2023 </small>
-                                        </p>
-                                    </div>
-                                    <div class="col-auto">
-                                        <button type="button" class="btn btn-outline-secondary btn-sm me-1">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-fullscreen" viewBox="0 0 16 16">
-                                                <path d="M1.5 1a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 0h4a.5.5 0 0 1 0 1h-4zM10 .5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 16 1.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5zM.5 10a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5zm15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5z">
-                                                </path>
-                                            </svg>
-                                            <button type="button" class="btn btn-success btn-sm">
-                                                Выбрать
+                    <div v-for="(file, index) in filesClip">
+                        <div class="col">
+                            <div class="card h-100">
+                                <small class="card-header p-2">
+                                    <div class="row justify-content-between align-items-center">
+                                        <div class="col-auto align-items-center">
+                                            <p class="card-text m-0">
+                                                <div class="badge bg-secondary text-wrap align-items-center rounded-pill">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person" viewBox="0 0 16 16">
+                                                        <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4Zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10Z"/>
+                                                    </svg>
+                                                    {{ file.author.name }}
+                                                </div>
+                                            </p>
+                                        </div>
+                                        <div class="col-auto">
+                                            <a type="button" class="btn btn-outline-secondary btn-sm me-1" :href="file.src" target="_blank" rel="noopener noreferrer">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-fullscreen" viewBox="0 0 16 16">
+                                                    <path d="M1.5 1a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 0h4a.5.5 0 0 1 0 1h-4zM10 .5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 16 1.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5zM.5 10a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5zm15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5z" />
+                                                </svg>
+                                            </a>
+                                            <button @click="selectFile(file)" type="button" class="btn btn-success btn-sm">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-lg" viewBox="0 0 16 16">
+                                                    <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425a.247.247 0 0 1 .02-.022"/>
+                                                </svg>
                                             </button>
-                                        </button>
+                                        </div>
+                                    </div>
+                                </small>
+                                <img :src="file.src" style="object-fit: cover; width: 100%; height: 100%; max-height: 140px;"  alt="" />
+                                <div class="card-body p-2">
+                                    <h6 class="card-title mb-1 mt-0 ms-0 me-0">{{ file.name + '.' + file.format }} </h6>
+                                    <div class="badge bg-info text-wrap align-items-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-fill" viewBox="0 0 16 16">
+                                            <path d="M4 0h5.293A1 1 0 0 1 10 .293L13.707 4a1 1 0 0 1 .293.707V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2zm5.5 1.5v2a1 1 0 0 0 1 1h2l-3-3z"/>
+                                        </svg>
+                                        {{ file.weight }}
+                                    </div>
+                                    <div class="badge bg-secondary text-wrap ms-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-calendar-check" viewBox="0 0 16 16">
+                                            <path d="M10.854 7.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 9.793l2.646-2.647a.5.5 0 0 1 .708 0z"/>
+                                            <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/>
+                                        </svg>
+                                        {{ file.isUnlimited ? 'Бессрочно' : file.expires }}
                                     </div>
                                 </div>
-                            </small>
-                            <img src="https://i.ytimg.com/vi/MdTuact6xmY/maxresdefault.jpg" style="object-fit: cover; width: 100%; height: 100%; max-height: 140px;" alt="">
-                            <div class="card-body">
-                                <h6 class="card-title m-0">bmstu.jpg
-                                    <small class="text-body-secondary ms-1"> (954 kb) </small>
-                                </h6>
                             </div>
                         </div>
                     </div>
@@ -1175,34 +1325,32 @@ export default {
                             Пары:
                             <select v-model="composePrograms[0]" class="form-select form-select-sm w-75" aria-label=".form-select-sm example">
                                 <option value="-" selected>- Нет изменений -</option>
-                                <option v-for="tmp in programs" :value="tmp.id"> {{ tmp.name }} </option>
+                                <option v-for="tmp in programs" :value="tmp.id" :disabled="tmp.composeId !== null"> {{ tmp.name }} </option>
                             </select>
                         </div>
                         <div v-if="!composeSpecialFlag" class="d-flex w-100 justify-content-between align-items-center gap-1">
                             Перерыв:
                             <select v-model="composePrograms[1]" class="form-select form-select-sm w-75" aria-label=".form-select-sm example">
                                 <option value="-" selected>- Нет изменений -</option>
-                                <option v-for="tmp in programs" :value="tmp.id"> {{ tmp.name }} </option>
+                                <option v-for="tmp in programs" :value="tmp.id" :disabled="tmp.composeId !== null"> {{ tmp.name }} </option>
                             </select>
                         </div>
                         <div v-if="!composeSpecialFlag" class="d-flex w-100 justify-content-between align-items-center gap-1">
                             Обед:
                             <select v-model="composePrograms[2]" class="form-select form-select-sm w-75" aria-label=".form-select-sm example">
                                 <option value="-" selected>- Нет изменений -</option>
-                                <option v-for="tmp in programs" :value="tmp.id"> {{ tmp.name }} </option>
+                                <option v-for="tmp in programs" :value="tmp.id" :disabled="tmp.composeId !== null"> {{ tmp.name }} </option>
                             </select>
                         </div>
                         <div v-if="composeSpecialFlag" v-for="(program, index) in composePrograms" class="d-flex w-100 justify-content-between gap-1">
                             <input v-model="composeTimes[index]" type="time" class="form-control form-select-sm">
                             <select v-model="composePrograms[index]" class="form-select form-select-sm" aria-label="Default select example">
                                 <option value="-" selected>- Не выбрано -</option>
-                                <option v-for="tmp in programs" :value="tmp.id"> {{ tmp.name }} </option>
+                                <option v-for="tmp in programs" :value="tmp.id" :disabled="tmp.composeId !== null"> {{ tmp.name }} </option>
                             </select>
                             <button @click="composePrograms.splice(index, 1); this.composeTimes.splice(index, 1);" type="button" class="btn btn-outline-danger btn-sm">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3" viewBox="0 0 16 16">
-                                    <path
-                                        d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5ZM11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1h-.995a.59.59 0 0 0-.01 0H11Zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5h9.916Zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47ZM8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z">
-                                    </path>
+                                    <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5ZM11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1h-.995a.59.59 0 0 0-.01 0H11Zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5h9.916Zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47ZM8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z"></path>
                                 </svg>
                             </button>
                         </div>
@@ -1349,9 +1497,7 @@ export default {
                             шаблонами</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="pills-composed-tab" data-bs-toggle="pill"
-                            data-bs-target="#pills-composed" type="button" role="tab" aria-selected="false">Скомпанованные
-                            программы</button>
+                        <button class="nav-link" id="pills-composed-tab" data-bs-toggle="pill" data-bs-target="#pills-composed" type="button" role="tab" aria-selected="false">Скомпонованные программы</button>
                     </li>
                     <!-- КОНЕЦ: Вкладки -->
                 </ul>
@@ -1366,25 +1512,20 @@ export default {
                             <div class="col-12 col-sm-12 col-md-12 col-lg-7">
                                 <div class="input-group ms-0 me-0 mb-2">
                                     <!-- v-for="tmp in this.programs" -->
-                                    <select v-model="programId" class="form-select" id="inputGroupSelect04"
-                                        @keydown.enter="getTmp(programId)">
+                                    <select v-model="programId" class="form-select" id="inputGroupSelect04" @keydown.enter="getTmp(programId)">
                                         <option value="-" selected>- Выберите -</option>
-                                        <option v-for="tmp in programs" :value="tmp.id"> {{ tmp.name }} </option>
+                                        <option v-for="tmp in programs" :value="tmp.id"> {{ tmp.name + (tmp.composeId === null ? '' : ' (исп.)') }} </option>
                                     </select>
-                                    <button @click="getTmp(programId)" class="btn btn-success"
-                                        type="button">Открыть</button>
+                                    <button @click="getTmp(programId)" class="btn btn-success" type="button">Открыть</button>
                                 </div>
                             </div>
-                            <div class="col-12 col-sm-12 col-md-5 col-lg-2">
+                            <div v-if="composeDetailsModal.programObj.composeId === null" class="col-12 col-sm-12 col-md-5 col-lg-2">
                                 <div class="row mt-0 gx-2">
                                     <!-- Button trigger Delete modal -->
                                     <div class="col-12 mb-2">
-                                        <button type="button" class="btn btn-outline-danger w-100" data-bs-toggle="modal"
-                                            data-bs-target="#ModalDelete">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                                fill="currentColor" class="bi bi-trash3" viewBox="0 0 16 16">
-                                                <path
-                                                    d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5ZM11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1h-.995a.59.59 0 0 0-.01 0H11Zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5h9.916Zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47ZM8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z" />
+                                        <button type="button" class="btn btn-outline-danger w-100" data-bs-toggle="modal" data-bs-target="#ModalDelete">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3" viewBox="0 0 16 16">
+                                                <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5ZM11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1h-.995a.59.59 0 0 0-.01 0H11Zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5h9.916Zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47ZM8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z" />
                                             </svg>
                                             Удалить
                                         </button>
@@ -1394,12 +1535,9 @@ export default {
                             <div class="col-12 col-sm-12 col-md-7 col-lg-3 mb-2">
                                 <!-- Button trigger Send modal -->
                                 <button type="button" class="btn btn-success w-100" @click="this.sendCallback.show()">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                        class="bi bi-stack" viewBox="0 0 16 16">
-                                        <path
-                                            d="m14.12 10.163 1.715.858c.22.11.22.424 0 .534L8.267 15.34a.598.598 0 0 1-.534 0L.165 11.555a.299.299 0 0 1 0-.534l1.716-.858 5.317 2.659c.505.252 1.1.252 1.604 0l5.317-2.66zM7.733.063a.598.598 0 0 1 .534 0l7.568 3.784a.3.3 0 0 1 0 .535L8.267 8.165a.598.598 0 0 1-.534 0L.165 4.382a.299.299 0 0 1 0-.535L7.733.063z" />
-                                        <path
-                                            d="m14.12 6.576 1.715.858c.22.11.22.424 0 .534l-7.568 3.784a.598.598 0 0 1-.534 0L.165 7.968a.299.299 0 0 1 0-.534l1.716-.858 5.317 2.659c.505.252 1.1.252 1.604 0l5.317-2.659z" />
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-stack" viewBox="0 0 16 16">
+                                        <path d="m14.12 10.163 1.715.858c.22.11.22.424 0 .534L8.267 15.34a.598.598 0 0 1-.534 0L.165 11.555a.299.299 0 0 1 0-.534l1.716-.858 5.317 2.659c.505.252 1.1.252 1.604 0l5.317-2.66zM7.733.063a.598.598 0 0 1 .534 0l7.568 3.784a.3.3 0 0 1 0 .535L8.267 8.165a.598.598 0 0 1-.534 0L.165 4.382a.299.299 0 0 1 0-.535L7.733.063z" />
+                                        <path d="m14.12 6.576 1.715.858c.22.11.22.424 0 .534l-7.568 3.784a.598.598 0 0 1-.534 0L.165 7.968a.299.299 0 0 1 0-.534l1.716-.858 5.317 2.659c.505.252 1.1.252 1.604 0l5.317-2.659z" />
                                     </svg>
                                     Скомпоновать
                                 </button>
@@ -1421,24 +1559,23 @@ export default {
                         <div class="row gx-2 gy-2 align-items-center">
                             <div class="col-12">
                                 <div class="row justify-content-start">
-                                    <div v-if="this.composeDetailsModal.withChanges" class="col-auto m-0" style="color:red">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                            class="bi bi-exclamation-triangle-fill" viewBox="0 0 16 16">
-                                            <path
-                                                d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z">
-                                            </path>
+                                    <div v-if="composeDetailsModal.withChanges" class="col-auto m-0" style="color:red">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-exclamation-triangle-fill mb-1" viewBox="0 0 16 16">
+                                            <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
                                         </svg>
                                         ИЗМЕНЕНИЯ НЕ СОХРАНЕНЫ
                                     </div>
-                                    <div v-if="!this.composeDetailsModal.withChanges" class="col-auto m-0"
-                                        style="color:green">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                            class="bi bi-check-circle-fill" viewBox="0 0 16 16">
-                                            <path
-                                                d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z">
-                                            </path>
+                                    <div v-if="!composeDetailsModal.withChanges && composeDetailsModal.programObj.composeId === null" class="col-auto m-0" style="color:green">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-circle-fill mb-1" viewBox="0 0 16 16">
+                                            <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
                                         </svg>
                                         ИЗМЕНЕНИЯ СОХРАНЕНЫ
+                                    </div>
+                                    <div v-if="!composeDetailsModal.withChanges && composeDetailsModal.programObj.composeId !== null" class="col-auto m-0" style="color:orange">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-exclamation-triangle-fill mb-1" viewBox="0 0 16 16">
+                                            <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+                                        </svg>
+                                        ДАННАЯ ПРОГРАММА СКОМПОНОВАНА. ВНЕСТИ ИЗМЕНЕНИЯ ВЫ МОЖЕТЕ НА СООТВЕТСТВУЮЩЕЙ ВКЛАДКЕ.
                                     </div>
                                 </div>
                             </div>
@@ -1463,12 +1600,10 @@ export default {
                             <div class="col-12 col-sm-12 col-md-3 col-lg-3">
                                 <div class="row g-2 mb-2">
                                     <div v-if="this.composeDetailsModal.withChanges" class="col">
-                                        <button type="button" class="btn btn-success w-100"
-                                            @click="checkIssues">Сохранить</button>
+                                        <button type="button" class="btn btn-success w-100" @click="checkIssues">Сохранить</button>
                                     </div>
                                     <div class="col">
-                                        <button @click="openPreview('tmp')" type="button" class="btn btn-info w-100"
-                                            data-bs-toggle="modal" data-bs-target="#PreviewModal"> Предпросмотр </button>
+                                        <button @click="openPreview('tmp')" type="button" class="btn btn-info w-100" data-bs-toggle="modal" data-bs-target="#PreviewModal"> Предпросмотр </button>
                                     </div>
                                 </div>
                             </div>
@@ -1476,39 +1611,29 @@ export default {
 
                         <div v-for="(event, index) in events" class="row gx-2 gy-2 align-items-center p-1">
                             <!-- ИНПУТ НА ИМЯ -->
-                            <div v-if="!editForm[index].isDeleted" @click="this.clickBlock(editForm[index].isDisabled)"
-                                class="col-12 col-sm-4 col-md-4 col-lg-3">
+                            <div v-if="!editForm[index].isDeleted" @click="this.clickBlock(editForm[index].isDisabled)" class="col-12 col-sm-4 col-md-4 col-lg-3">
                                 <label class="visually-hidden" for="specificSizeInputName1">Name</label>
-                                <input v-model="event.name" class="form-control" id="specificSizeInputName1"
-                                    placeholder="Имя" :disabled="editForm[index].isDisabled">
+                                <input v-model="event.name" class="form-control" id="specificSizeInputName1" placeholder="Имя" :disabled="editForm[index].isDisabled">
                             </div>
                             <!-- ССЫЛКА -->
-                            <div v-if="!editForm[index].isDeleted && !editForm[index].isDisabled && event.type === 'webform'"
-                                class="col-12 col-sm-3 col-md-3 col-lg-2">
+                            <div v-if="!editForm[index].isDeleted && !editForm[index].isDisabled && event.type === 'webform'" class="col-12 col-sm-3 col-md-3 col-lg-2">
                                 <label class="visually-hidden" for="specificSizeInputGroupUsername1">Username</label>
-                                <input v-model="event.src" type="text" class="form-control"
-                                    id="specificSizeInputGroupUsername1" placeholder="Ссылка">
+                                <input v-model="event.src" type="text" class="form-control" id="specificSizeInputGroupUsername1" placeholder="Ссылка">
                             </div>
                             <!-- ФАЙЛ -->
-                            <div v-if="!editForm[index].isDeleted && !editForm[index].isDisabled && event.type !== 'webform'"
-                                class="col-12 col-sm-3 col-md-3 col-lg-2">
+                            <div v-if="!editForm[index].isDeleted && !editForm[index].isDisabled && event.type !== 'webform'" class="col-12 col-sm-3 col-md-3 col-lg-2">
                                 <div class="hstack gap-1">
                                     <input class="form-control" type="text" :value="event.src.split('--')[1]" disabled>
                                     <!-- ВОТ ТУТ КНОПКА ВЫБОРА - ОТКРЫТИЯ OFFCANVAS (Сам он выше, на 2 строчке) -->
-                                    <button class="btn btn-outline-success" type="button"
-                                        @click="openCanvas(events[index], -1, event.type, true)">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                            class="bi bi-folder2-open" viewBox="0 0 16 16">
+                                    <button class="btn btn-outline-success" type="button" @click="openCanvas(events[index], -1, event.type, true)">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-folder2-open" viewBox="0 0 16 16">
                                             <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184C7.985 3.648 8.48 4 9 4h4.5A1.5 1.5 0 0 1 15 5.5v.64c.57.265.94.876.856 1.546l-.64 5.124A2.5 2.5 0 0 1 12.733 15H3.266a2.5 2.5 0 0 1-2.481-2.19l-.64-5.124A1.5 1.5 0 0 1 1 6.14V3.5zM2 6h12v-.5a.5.5 0 0 0-.5-.5H9c-.964 0-1.71-.629-2.174-1.154C6.374 3.334 5.82 3 5.264 3H2.5a.5.5 0 0 0-.5.5V6zm-.367 1a.5.5 0 0 0-.496.562l.64 5.124A1.5 1.5 0 0 0 3.266 14h9.468a1.5 1.5 0 0 0 1.489-1.314l.64-5.124A.5.5 0 0 0 14.367 7H1.633z" />
                                         </svg>
                                     </button>
                                     <div v-if="event.src.split('--')[1]" class="vr"></div>
-                                    <button v-if="event.src.split('--')[1]" @click="event.src = ''" type="button"
-                                        class="btn btn-outline-danger">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                            class="bi bi-trash3" viewBox="0 0 16 16">
-                                            <path
-                                                d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5ZM11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1h-.995a.59.59 0 0 0-.01 0H11Zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5h9.916Zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47ZM8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z" />
+                                    <button v-if="event.src.split('--')[1]" @click="event.src = ''" type="button" class="btn btn-outline-danger">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3" viewBox="0 0 16 16">
+                                            <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5ZM11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1h-.995a.59.59 0 0 0-.01 0H11Zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5h9.916Zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47ZM8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z" />
                                         </svg>
                                     </button>
                                 </div>
@@ -1532,7 +1657,7 @@ export default {
                                 <input v-model="event.time" type="number" class="form-control" id="specificSizeInputGroupUsername2" placeholder="Время в сек" :disabled="editForm[index].isDisabled">
                             </div>
                             <!-- КНОПКА РЕДАКТИРОВАТЬ -->
-                            <div v-if="!editForm[index].isDeleted" class="col-auto">
+                            <div v-if="!editForm[index].isDeleted && composeDetailsModal.programObj.composeId === null" class="col-auto">
                                 <button v-if="!editForm[index].isDeleted && editForm[index].isDisabled" @click="changeEvent(index, editForm)" class="btn btn-secondary">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16">
                                         <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207l6.5-6.5zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.499.499 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11l.178-.178z" />
@@ -1557,16 +1682,16 @@ export default {
                                 </template>
                             </div>
                             <!-- ВВЕРХ -->
-                            <div v-if="!editForm[index].isDeleted && editForm[index].isDisabled" class="col-auto">
+                            <div v-if="!editForm[index].isDeleted && editForm[index].isDisabled && composeDetailsModal.programObj.composeId === null" class="col-auto">
                                 <button @click="moveEvent('up', index, events, editForm, true)" class="btn btn-outline-warning"><i class="fa-solid fa-up"></i></button>
                             </div>
                             <!-- ВНИЗ -->
-                            <div v-if="!editForm[index].isDeleted && editForm[index].isDisabled" class="col-auto">
+                            <div v-if="!editForm[index].isDeleted && editForm[index].isDisabled && composeDetailsModal.programObj.composeId === null" class="col-auto">
                                 <button @click="moveEvent('down', index, events, editForm, true)" class="btn btn-outline-warning"><i class="fa-solid fa-down"></i></button>
                             </div>
                         </div>
                         <!--ФОРМА ДОБАВЛЕНИЯ-->
-                        <div class="row gx-2 gy-2 align-items-center p-1">
+                        <div v-if="composeDetailsModal.programObj.composeId === null" class="row gx-2 gy-2 align-items-center p-1">
                             <div class="col-12 col-sm-4 col-md-4 col-lg-3">
                                 <label class="visually-hidden" for="specificSizeInputName">Name</label>
                                 <input v-model="addForm.name" type="text" class="form-control" id="specificSizeInputName" placeholder="Имя" required>
@@ -1574,8 +1699,7 @@ export default {
 
                             <div v-if="addForm.type === 'webform'" class="col-12 col-sm-3 col-md-3 col-lg-2">
                                 <label class="visually-hidden" for="specificSizeInputGroupUsername3">Username</label>
-                                <input v-model="addForm.src" type="text" class="form-control"
-                                    id="specificSizeInputGroupUsername3" placeholder="Ссылка" required>
+                                <input v-model="addForm.src" type="text" class="form-control" id="specificSizeInputGroupUsername3" placeholder="Ссылка" required>
                             </div>
 
                             <!-- ФАЙЛ -->
@@ -1583,21 +1707,15 @@ export default {
                                 <div class="hstack gap-1">
                                     <input class="form-control" type="text" :value="addForm.src.split('--')[1]" disabled>
                                     <!-- ВОТ ТУТ КНОПКА ВЫБОРА - ОТКРЫТИЯ OFFCANVAS (Сам он выше, на 2 строчке) -->
-                                    <button class="btn btn-outline-success" type="button"
-                                        @click="openCanvas(addForm, -1, addForm.type, true)">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                            class="bi bi-folder2-open" viewBox="0 0 16 16">
-                                            <path
-                                                d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184C7.985 3.648 8.48 4 9 4h4.5A1.5 1.5 0 0 1 15 5.5v.64c.57.265.94.876.856 1.546l-.64 5.124A2.5 2.5 0 0 1 12.733 15H3.266a2.5 2.5 0 0 1-2.481-2.19l-.64-5.124A1.5 1.5 0 0 1 1 6.14V3.5zM2 6h12v-.5a.5.5 0 0 0-.5-.5H9c-.964 0-1.71-.629-2.174-1.154C6.374 3.334 5.82 3 5.264 3H2.5a.5.5 0 0 0-.5.5V6zm-.367 1a.5.5 0 0 0-.496.562l.64 5.124A1.5 1.5 0 0 0 3.266 14h9.468a1.5 1.5 0 0 0 1.489-1.314l.64-5.124A.5.5 0 0 0 14.367 7H1.633z" />
+                                    <button class="btn btn-outline-success" type="button" @click="openCanvas(addForm, -1, addForm.type, true)">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-folder2-open" viewBox="0 0 16 16">
+                                            <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184C7.985 3.648 8.48 4 9 4h4.5A1.5 1.5 0 0 1 15 5.5v.64c.57.265.94.876.856 1.546l-.64 5.124A2.5 2.5 0 0 1 12.733 15H3.266a2.5 2.5 0 0 1-2.481-2.19l-.64-5.124A1.5 1.5 0 0 1 1 6.14V3.5zM2 6h12v-.5a.5.5 0 0 0-.5-.5H9c-.964 0-1.71-.629-2.174-1.154C6.374 3.334 5.82 3 5.264 3H2.5a.5.5 0 0 0-.5.5V6zm-.367 1a.5.5 0 0 0-.496.562l.64 5.124A1.5 1.5 0 0 0 3.266 14h9.468a1.5 1.5 0 0 0 1.489-1.314l.64-5.124A.5.5 0 0 0 14.367 7H1.633z" />
                                         </svg>
                                     </button>
                                     <div v-if="addForm.src.split('--')[1]" class="vr"></div>
-                                    <button v-if="addForm.src.split('--')[1]" @click="addForm.src = ''" type="button"
-                                        class="btn btn-outline-danger">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                            class="bi bi-trash3" viewBox="0 0 16 16">
-                                            <path
-                                                d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5ZM11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1h-.995a.59.59 0 0 0-.01 0H11Zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5h9.916Zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47ZM8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z" />
+                                    <button v-if="addForm.src.split('--')[1]" @click="addForm.src = ''" type="button" class="btn btn-outline-danger">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3" viewBox="0 0 16 16">
+                                            <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5ZM11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1h-.995a.59.59 0 0 0-.01 0H11Zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5h9.916Zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47ZM8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z" />
                                         </svg>
                                     </button>
                                 </div>
@@ -1612,8 +1730,7 @@ export default {
                             </div>
                             <div class="col-12 col-sm-2 col-md-2 col-lg-1">
                                 <label class="visually-hidden" for="specificSizeInputGroupUsername">Username</label>
-                                <input v-model="addForm.time" type="number" class="form-control"
-                                    id="specificSizeInputGroupUsername" placeholder="Время в сек" required>
+                                <input v-model="addForm.time" type="number" class="form-control" id="specificSizeInputGroupUsername" placeholder="Время в сек" required>
                             </div>
                             <div class="col-auto">
                                 <button @click="createEvent(editForm, events, addForm)" type="submit" class="btn btn-success">Добавить</button>
@@ -1622,7 +1739,7 @@ export default {
                         <br>
                     </div>
                 </div>
-                <!-- СКОМПАНОВАННЫЕ ПРОГРАММЫ ТРАНСЛЯЦИИ -->
+                <!-- СКОМПОНОВАННЫЕ ПРОГРАММЫ ТРАНСЛЯЦИИ -->
                 <div class="tab-pane fade" id="pills-composed" role="tabpanel" aria-labelledby="pills-composed-tab" tabindex="0">
                     <div class="content">
                         <div class="d-flex w-100 justify-content-start align-items-center gap-3 mt-1">
@@ -1633,7 +1750,7 @@ export default {
                             <label class="btn btn-outline-success" for="option6">Композиции других пользователей</label>
                         </div>
                     </div>
-                    <div v-if="this.composes.length === 0" class="content"> Нет скомпанованных программ </div>
+                    <div v-if="this.composes.length === 0" class="content"> Нет скомпонованных программ </div>
                     <div v-if="this.composes.length > 0" class="content">
                         <ul class="list-group">
                             <li v-for="(cmp, index) in this.composes" class="list-group-item">
@@ -1725,7 +1842,7 @@ export default {
                                         <div class="d-flex w-100">
                                             <select v-model="cmp.programs[0]" @change="eventList = []" class="form-select form-select-sm" :disabled="cmp.lock">
                                                 <option selected :value="cmp.programs[0]"> {{ cmp.programs[0].name }}</option>
-                                                <option v-for="tmp in programs" :value="tmp"> {{ tmp.name }}</option>
+                                                <option v-for="tmp in programs" :value="tmp" :disabled="tmp.composeId !== null"> {{ tmp.name }}</option>
                                             </select>
                                             <button v-if="!cmp.lock || viewOtherComposes" @click="openPreview('cmp', cmp, cmp.programs[0])" type="button" data-bs-toggle="modal" data-bs-target="#PreviewModal" class="btn btn-info btn-sm">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-fill" viewBox="0 0 16 16">
@@ -1742,8 +1859,8 @@ export default {
                                     <div class="col-12 col-sm-8 col-md-9 col-lg-10 p-0">
                                         <div class="d-flex w-100">
                                             <select v-model="cmp.programs[1]" @change="eventList = []" class="form-select form-select-sm" :disabled="cmp.lock">
-                                                <option selected :value="cmp.programs[1]"> {{ cmp.programs[1].name }}</option>
-                                                <option v-for="tmp in programs" :value="tmp"> {{ tmp.name }}</option>
+                                                <option selected :value="cmp.programs[1]"> {{ cmp.programs[1].name }} </option>
+                                                <option v-for="tmp in programs" :value="tmp" :disabled="tmp.composeId !== null"> {{ tmp.name }}</option>
                                             </select>
                                             <button v-if="!cmp.lock || viewOtherComposes" @click="openPreview('cmp', cmp, cmp.programs[1])" type="button" data-bs-toggle="modal" data-bs-target="#PreviewModal" class="btn btn-info btn-sm">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-fill" viewBox="0 0 16 16">
@@ -1761,7 +1878,7 @@ export default {
                                         <div class="d-flex w-100">
                                             <select v-model="cmp.programs[2]" @change="this.eventList = []" class="form-select form-select-sm" :disabled="cmp.lock">
                                                 <option selected :value="cmp.programs[2]"> {{ cmp.programs[2].name }} </option>
-                                                <option v-for="tmp in programs" :value="tmp"> {{ tmp.name }} </option>
+                                                <option v-for="tmp in programs" :value="tmp" :disabled="tmp.composeId !== null"> {{ tmp.name }} </option>
                                             </select>
                                             <button v-if="!cmp.lock || viewOtherComposes" @click="openPreview('cmp', cmp, cmp.programs[2])" type="button" data-bs-toggle="modal" data-bs-target="#PreviewModal" class="btn btn-info btn-sm">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-fill" viewBox="0 0 16 16">
@@ -1777,7 +1894,7 @@ export default {
                                     <input v-model="cmp.programs[index].timeToSwap" type="time" class="form-control form-select-sm" :disabled="cmp.lock">
                                     <select v-model="cmp.programs[index]" class="form-select form-select-sm" aria-label="Default select example" :disabled="cmp.lock">
                                         <option :value="cmp.programs[index]" selected> {{ cmp.programs[index].name }} </option>
-                                        <option v-for="tmp in programs" :value="tmp"> {{ tmp.name }} </option>
+                                        <option v-for="tmp in programs" :value="tmp" :disabled="tmp.composeId !== null"> {{ tmp.name }} </option>
                                     </select>
                                     <!-- УДАЛИТЬ -->
                                     <button v-if="!cmp.lock" @click="cmp.programs.splice(index, 1)" type="button" class="btn btn-outline-danger btn-sm">
@@ -1819,7 +1936,7 @@ export default {
                                                 </button>
                                             </div>
                                             <div v-if="['created', 'rejected', 'returned'].includes(cmp.status)" class="col pe-0">
-                                                <button @click="CMP_ID = cmp.id" class="btn btn-outline-warning w-100" data-bs-toggle="modal" data-bs-target="#ModalSend">
+                                                <button @click="CMP_ID = cmp.id; CMP_NAME = cmp.name; CMP_COMM = cmp.comment;" class="btn btn-outline-warning w-100" data-bs-toggle="modal" data-bs-target="#ModalSend">
                                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-envelope" viewBox="0 0 16 16">
                                                         <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4Zm2-1a1 1 0 0 0-1 1v.217l7 4.2 7-4.2V4a1 1 0 0 0-1-1H2Zm13 2.383-4.708 2.825L15 11.105V5.383Zm-.034 6.876-5.64-3.471L8 9.583l-1.326-.795-5.64 3.47A1 1 0 0 0 2 13h12a1 1 0 0 0 .966-.741ZM1 11.105l4.708-2.897L1 5.383v5.722Z" />
                                                     </svg>

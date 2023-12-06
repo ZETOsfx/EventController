@@ -1,8 +1,13 @@
 <script>
+import canvasFiles from '../components/canvasFiles.vue';
+
 export default {
     props: ['eventList', 'editFormS', 'editFormB', 'editFormL', 'addForm',
         'editEventCmp', 'addEventCmp', 'delEventCmp', 'demoMode',
         'moveEventCmp', 'currentModalPage', 'customForms'],
+    components: {
+        canvasFiles,
+    },
     data()
     {
         return {
@@ -10,14 +15,17 @@ export default {
 
             reserveType: '',
             filter: '',
+            sortBy: ['none', 'asc'],
             viewFiles: [],  // Список файлов, отображаемых по фильтруемым параметрам
 
             canvas: {},     // Объект-канвас
             filesImg: [],    // Список изображений
             filesClip: [],   // Список видеофайлов
+            files: {},
+            users: [],
 
-            dataForm: {},   //
-            dataIndex: {},  //
+            dataForm: {},
+            dataIndex: {},
         }
     },
     methods: {
@@ -46,6 +54,23 @@ export default {
                     }
                 });
             }
+
+            this.files = {
+                img: this.filesImg,
+                mov: this.filesClip,
+            }
+
+            let response = await fetch('/accounts', {
+                method: 'GET',
+                headers: new Headers({
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'x-access-token': JSON.parse(localStorage.getItem('user')).token,
+                }),
+            });
+            response = await response.json();
+            this.users = response.data;
         },
 
         openCanvas(form, index, type, inForm = false)
@@ -75,27 +100,94 @@ export default {
             file.src = '';
         },
 
-        search(searchParam)
+        search(searchParam, sortBy)
         {
-            if (searchParam === '') {
-                this.typeOfList = this.reserveType;
-                return;
-            }
+            this.filesImg = this.files.img;
+            this.filesClip = this.files.mov;
+
             if (this.typeOfList !== 'filtered') {
                 this.reserveType = this.typeOfList;
             }
-            this.typeOfList = 'filtered';
-            this.viewFiles = [];
+            if (searchParam === '') {
+                this.typeOfList = this.reserveType;
+            } else {
+                this.typeOfList = 'filtered';
+                this.viewFiles = [];
 
-            for (let i in this.filesImg) {
-                if (this.filesImg[i].name.includes(searchParam)) {
-                    this.viewFiles.push(this.filesImg[i]);
+                for (let i in this.filesImg) {
+                    if (this.filesImg[i].name.includes(searchParam) || searchParam === '') {
+                        this.viewFiles.push(this.filesImg[i]);
+                    }
+                }
+                for (let i in this.filesClip) {
+                    if (this.filesClip[i].name.includes(searchParam) || searchParam === '') {
+                        this.viewFiles.push(this.filesClip[i]);
+                    }
                 }
             }
-            for (let i in this.filesClip) {
-                if (this.filesClip[i].name.includes(searchParam)) {
-                    this.viewFiles.push(this.filesClip[i]);
-                }
+
+            switch (sortBy[0]) {
+                case 'name':
+                    function sortFuncName(a, b)
+                    {
+                        if (a.name.toLowerCase() < b.name.toLowerCase()) {
+                            return -1;
+                        }
+                        if (a.name.toLowerCase() > b.name.toLowerCase()) {
+                            return 1;
+                        }
+                        return 0;
+                    }
+                    this.viewFiles.sort(sortFuncName);
+                    this.filesImg.sort(sortFuncName);
+                    if (sortBy[0] !== 'none' && sortBy[1] === 'desc') {
+                        this.viewFiles.reverse();
+                        this.filesImg.reverse();
+                    }
+                    break;
+                case 'date':
+                    function sortFuncDate(a, b)
+                    {
+                        if (a.createdAt < b.createdAt) {
+                            return -1;
+                        }
+                        if (a.createdAt > b.createdAt) {
+                            return 1;
+                        }
+                        return 0;
+                    }
+                    this.viewFiles.sort(sortFuncDate);
+                    this.filesImg.sort(sortFuncDate);
+                    if (sortBy[0] !== 'none' && sortBy[1] === 'desc') {
+                        this.viewFiles.reverse();
+                        this.filesImg.reverse();
+                    }
+                    break;
+                case 'author':
+                    if (sortBy[1] !== '-') {
+                        this.viewFiles = this.viewFiles.filter(file => file.author.name === sortBy[1]);
+                        this.filesImg = this.filesImg.filter(file => file.author.name === sortBy[1]);
+                    }
+                    break;
+                case 'weight':
+                    function sortFuncWeight(a, b)
+                    {
+                        if (a.author.name < b.author.name) {
+                            return -1;
+                        }
+                        if (a.author.name > b.author.name) {
+                            return 1;
+                        }
+                        return 0;
+                    }
+                    this.viewFiles.sort(sortFuncWeight);
+                    this.filesImg.sort(sortFuncWeight);
+                    if (sortBy[0] !== 'none' && sortBy[1] === 'desc') {
+                        this.viewFiles.reverse();
+                        this.filesImg.reverse();
+                    }
+                    break;
+                default:
             }
         },
 
@@ -116,7 +208,7 @@ export default {
     <div class="offcanvas offcanvas-end" data-bs-backdrop="static" tabindex="-1" id="Testoffc" aria-labelledby="staticBackdropLabel">
         <div class="offcanvas-header">
             <h5 class="offcanvas-title">Выберите файл</h5>
-            <button @click="this.canvas.hide();" type="button" class="btn-close"></button>
+            <button @click="canvas.hide();" type="button" class="btn-close"></button>
         </div>
         <div class="input-group flex-nowrap pt-0 pb-0 ps-3 pe-3">
             <span class="input-group-text" id="addon-wrapping">
@@ -124,116 +216,38 @@ export default {
                     <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" />
                 </svg>
             </span>
-            <input @keydown.enter="this.search(this.filter)" v-model="this.filter" type="text" class="form-control" placeholder="Введите имя файла" aria-describedby="addon-wrapping">
-            <button @click="this.search(this.filter)" class="btn btn-outline-secondary" type="button">Найти</button>
+            <input @keydown.enter="search(filter, sortBy)" v-model="this.filter" type="text" class="form-control" placeholder="Введите имя файла" aria-describedby="addon-wrapping">
+            <button @click="search(filter, sortBy)" class="btn btn-outline-secondary" type="button">Найти</button>
         </div>
         <div class="input-group flex-nowrap pt-2 pb-2 ps-3 pe-3">
-            <select class="form-select form-select-sm">
-                <option value="0" selected>Имя</option>
-                <option value="1">Дата</option>
-                <option value="2">Автор</option>
+            <select v-model="sortBy[0]" class="form-select form-select-sm">
+                <option value="none" @click="sortBy[1] = 'asc'" selected>Без фильтра</option>
+                <option value="name" @click="sortBy[1] = 'asc'">Имя</option>
+                <option value="date" @click="sortBy[1] = 'asc'">Дата</option>
+                <option value="author" @click="sortBy[1] = '-'"> Автор </option>
+                <option value="weight" @click="sortBy[1] = 'asc'">Размер</option>
             </select>
-            <select class="form-select form-select-sm">
-                <option value="0" selected>Возрастание</option>
-                <option value="1">Убывание</option>
+            <select v-if="sortBy[0] !== 'author'" v-model="sortBy[1]" class="form-select form-select-sm">
+                <option value="asc" selected>По возрастанию</option>
+                <option value="desc">По убыванию</option>
+            </select>
+            <select v-if="sortBy[0] === 'author'" v-model="sortBy[1]" class="form-select form-select-sm">
+                <option value="-" selected>Все</option>
+                <option v-for="(user, index) in users" :value="user.name"> {{ user.name }} </option>
             </select>
         </div>
         <div class="offcanvas-body pt-0">
             <!-- ФИЛЬТР -->
-            <div v-if="typeOfList === 'filtered'">
-                <div v-for="file in this.viewFiles">
-                    <div class="card mb-2">
-                        <small class="card-header">
-                            <div class="row justify-content-between align-items-center">
-                                <div class="col-auto align-items-center">
-                                    <p class="card-text m-0"> {{ file.author.name }}
-                                        <small class="text-body-secondary ms-1"> {{ file.isUnlimited ? 'Бессрочно' : file.expires }} </small>
-                                    </p>
-                                </div>
-                                <div class="col-auto">
-                                    <button type="button" class="btn btn-outline-secondary btn-sm me-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-fullscreen" viewBox="0 0 16 16">
-                                            <path d="M1.5 1a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 0h4a.5.5 0 0 1 0 1h-4zM10 .5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 16 1.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5zM.5 10a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5zm15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5z" />
-                                        </svg>
-                                    </button>
-                                    <button @click="selectFile(file)" type="button" class="btn btn-success btn-sm">
-                                        Выбрать
-                                    </button>
-                                </div>
-                            </div>
-                        </small>
-                        <img :src="file.src" style="object-fit: cover; width: 100%; height: 100%; max-height: 140px;"  alt="" />
-                        <div class="card-body">
-                            <h6 class="card-title m-0">{{ file.name + '.' + file.format }}
-                                <small class="text-body-secondary ms-1"> ({{ file.weight }}) </small>
-                            </h6>
-                        </div>
-                    </div>
-                </div>
+            <div v-if="typeOfList === 'filtered'" class="row row-cols-1 row-cols-sm-2 g-2">
+                <canvasFiles :src="viewFiles" :select="selectFile" />
             </div>
             <!-- ИЗОБРАЖЕНИЯ -->
-            <div v-if="typeOfList === 'image'">
-                <div v-for="(file, index) in filesImg">
-                    <div class="card mb-2">
-                        <small class="card-header">
-                            <div class="row justify-content-between align-items-center">
-                                <div class="col-auto align-items-center">
-                                    <p class="card-text m-0"> {{ file.author.name }}
-                                        <small class="text-body-secondary ms-1"> {{ file.isUnlimited ? 'Бессрочно' : file.expires }} </small>
-                                    </p>
-                                </div>
-                                <div class="col-auto">
-                                    <button type="button" class="btn btn-outline-secondary btn-sm me-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-fullscreen" viewBox="0 0 16 16">
-                                            <path d="M1.5 1a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 0h4a.5.5 0 0 1 0 1h-4zM10 .5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 16 1.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5zM.5 10a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5zm15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5z" />
-                                        </svg>
-                                    </button>
-                                    <button @click="selectFile(file)" type="button" class="btn btn-success btn-sm">
-                                        Выбрать
-                                    </button>
-                                </div>
-                            </div>
-                        </small>
-                        <img :src="file.src" style="object-fit: cover; width: 100%; height: 100%; max-height: 140px;" alt="" />
-                        <div class="card-body">
-                            <h6 class="card-title m-0">{{ file.name + '.' + file.format }}
-                                <small class="text-body-secondary ms-1"> ({{ file.weight }}) </small>
-                            </h6>
-                        </div>
-                    </div>
-                </div>
+            <div v-if="typeOfList === 'image'" class="row row-cols-1 row-cols-sm-2 g-2">
+                <canvasFiles :src="filesImg" :select="selectFile" />
             </div>
             <!-- ВИДЕО -->
             <div v-if="typeOfList === 'video'">
-                <div v-for="(file, index) in filesClip">
-                    <div class="card mb-2">
-                        <small class="card-header">
-                            <div class="row justify-content-between align-items-center">
-                                <div class="col-auto align-items-center">
-                                    <p class="card-text m-0"> {{ file.author.name }}
-                                        <small class="text-body-secondary ms-1"> {{ file.expires }} </small>
-                                    </p>
-                                </div>
-                                <div class="col-auto">
-                                    <button type="button" class="btn btn-outline-secondary btn-sm me-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-fullscreen" viewBox="0 0 16 16">
-                                            <path d="M1.5 1a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 0h4a.5.5 0 0 1 0 1h-4zM10 .5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 16 1.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5zM.5 10a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5zm15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5z" />
-                                        </svg>
-                                        <button type="button" class="btn btn-success btn-sm">
-                                            Выбрать
-                                        </button>
-                                    </button>
-                                </div>
-                            </div>
-                        </small>
-                        <img src="https://i.ytimg.com/vi/MdTuact6xmY/maxresdefault.jpg" style="object-fit: cover; width: 100%; height: 100%; max-height: 140px;" alt="" />
-                        <div class="card-body">
-                            <h6 class="card-title m-0"> bmstu.jpg
-                                <small class="text-body-secondary ms-1"> (954 kb) </small>
-                            </h6>
-                        </div>
-                    </div>
-                </div>
+                <canvasFiles :src="filesClip" :select="selectFile" />
             </div>
         </div>
     </div>
@@ -485,8 +499,7 @@ export default {
                                 <!-- ССЫЛКА -->
                                 <div v-if="addForm.type === 'webform'" class="col-12 col-sm-3 col-md-3 col-lg-2">
                                     <label class="visually-hidden" for="specificSizeInputGroupUserDebi4">Username</label>
-                                    <input v-model="addForm.src" type="text" class="form-control"
-                                        id="specificSizeInputGroupUserDebi4" placeholder="Ссылка" required>
+                                    <input v-model="addForm.src" type="text" class="form-control" id="specificSizeInputGroupUserDebi4" placeholder="Ссылка" required>
                                 </div>
                                 <!-- ФАЙЛ -->
                                 <div v-if="addForm.type !== 'webform'" class="col-12 col-sm-3 col-md-3 col-lg-2">
@@ -516,8 +529,7 @@ export default {
                                 </div>
                                 <div class="col-12 col-sm-2 col-md-2 col-lg-1">
                                     <label class="visually-hidden" for="specificSizeInputGroupUserkek">Username</label>
-                                    <input v-model="addForm.time" type="number" class="form-control"
-                                        id="specificSizeInputGroupUserkek" placeholder="Время в сек" required>
+                                    <input v-model="addForm.time" type="number" class="form-control" id="specificSizeInputGroupUserkek" placeholder="Время в сек" required>
                                 </div>
                                 <div class="col-auto">
                                     <button @click="addEventCmp(editFormB, eventList.data.breaktime, addForm)" type="submit" class="btn btn-success">Добавить</button>
@@ -611,12 +623,10 @@ export default {
                                 </div>
                             </div>
                             <!--ФОРМА ДОБАВЛЕНИЯ!!!!!!!!!-->
-                            <div v-if="eventList.data.lunch !== 'lesson' && eventList.data.lunch !== 'breaktime' && !demoMode"
-                                class="row gx-2 gy-2 align-items-center p-1">
+                            <div v-if="eventList.data.lunch !== 'lesson' && eventList.data.lunch !== 'breaktime' && !demoMode" class="row gx-2 gy-2 align-items-center p-1">
                                 <div class="col-12 col-sm-4 col-md-4 col-lg-3">
                                     <label class="visually-hidden" for="specificSizeInputNameOfLol">Name</label>
-                                    <input v-model="addForm.name" type="text" class="form-control"
-                                        id="specificSizeInputNameOfLol" placeholder="Имя" required>
+                                    <input v-model="addForm.name" type="text" class="form-control" id="specificSizeInputNameOfLol" placeholder="Имя" required>
                                 </div>
                                 <!-- ССЫЛКА -->
                                 <div v-if="addForm.type === 'webform'" class="col-12 col-sm-3 col-md-3 col-lg-2">
@@ -739,12 +749,17 @@ export default {
                                     </button>
                                     <template v-if="!customForms[index][dex].isDisabled">
                                         <button @click="saveEventCmp(dex, customForms[index])" class="btn btn-secondary">
-                                            Сохранить </button>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-sd-card" viewBox="0 0 16 16">
+                                                <path d="M6.25 3.5a.75.75 0 0 0-1.5 0v2a.75.75 0 0 0 1.5 0v-2zm2 0a.75.75 0 0 0-1.5 0v2a.75.75 0 0 0 1.5 0v-2zm2 0a.75.75 0 0 0-1.5 0v2a.75.75 0 0 0 1.5 0v-2zm2 0a.75.75 0 0 0-1.5 0v2a.75.75 0 0 0 1.5 0v-2z" />
+                                                <path fill-rule="evenodd" d="M5.914 0H12.5A1.5 1.5 0 0 1 14 1.5v13a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 14.5V3.914c0-.398.158-.78.44-1.06L4.853.439A1.5 1.5 0 0 1 5.914 0zM13 1.5a.5.5 0 0 0-.5-.5H5.914a.5.5 0 0 0-.353.146L3.146 3.561A.5.5 0 0 0 3 3.914V14.5a.5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5v-13z" />
+                                            </svg>
+                                            <!-- Сохранить -->
+                                        </button>
                                         <button @click="delEventCmp(dex, customForms[index], eventList.data[index].events)" class="btn btn-outline-danger ms-1">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3" viewBox="0 0 16 16">
                                                 <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5ZM11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1h-.995a.59.59 0 0 0-.01 0H11Zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5h9.916Zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47ZM8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z" />
                                             </svg>
-                                            Удалить
+                                            <!-- Удалить-->
                                         </button>
                                     </template>
                                 </div>

@@ -3,28 +3,26 @@ import { authHeader } from '../helpers/auth-header';
 export const userService = {
     login,
     logout,
-    getAll
+    getAll,
 };
 
 /**
- * Попытка авторизации 
- * 
- * @param {*} username 
- * @param {*} password 
- * @returns 
+ * Попытка авторизации
+ *
+ * @param {*} username
+ * @param {*} password
+ * @returns
  */
-function login(username, password)
-{
+function login(username, password) {
     const requestOptions = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ login: username, password })
+        body: JSON.stringify({ login: username, password }),
     };
 
-    return fetch(`/auth`, requestOptions)
+    return fetch('/auth', requestOptions)
         .then(handleResponse)
-        .then(response =>
-        {
+        .then(response => {
             if (response.data.token) {
                 localStorage.setItem('user', JSON.stringify(response.data));
             }
@@ -32,24 +30,20 @@ function login(username, password)
         });
 }
 
-function logout()
-{
+function logout() {
     localStorage.removeItem('user');
 }
 
-async function getAll()
-{
+async function getAll() {
     const requestOptions = {
         method: 'GET',
-        headers: authHeader()
-    }
+        headers: authHeader(),
+    };
     return await fetch(`/users`, requestOptions).then(handleResponse);
 }
 
-function handleResponse(response)
-{
-    return response.json().then(jsonData =>
-    {
+function handleResponse(response) {
+    return response.json().then(jsonData => {
         const data = jsonData;
         if (!response.ok) {
             if (response.status === 401) {

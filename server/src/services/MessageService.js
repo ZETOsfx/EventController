@@ -1,13 +1,12 @@
-const { Note } = require("../../models");
+const { Note } = require('../../models');
 
 /**
  * Class MessageService
- * Отпрвка уведомлений
+ * Отправка уведомлений
  *
  * @package src/services
  */
-class MessageService
-{
+class MessageService {
     /**
      * Отправка уведомления
      *
@@ -19,8 +18,7 @@ class MessageService
      *         onBroadcast      // Флаг отображения на трансляции
      *         }
      */
-    async sendMessage({ header, description, authorId, actualCntDays, addressedToName, onBroadcast = false })
-    {
+    async sendMessage({ header, description, authorId, actualCntDays, addressedToName, onBroadcast = false }) {
         const currentDate = new Date();
         currentDate.setDate(currentDate.getDate() + actualCntDays);
         const expires = currentDate.toISOString().split('T')[0];

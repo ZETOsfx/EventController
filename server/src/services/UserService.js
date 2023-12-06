@@ -1,6 +1,6 @@
-const argon2 = require("argon2");
+const argon2 = require('argon2');
 
-const { Op } = require("sequelize");
+const { Op } = require('sequelize');
 const { User, Role } = require('../../models');
 
 /**
@@ -9,16 +9,14 @@ const { User, Role } = require('../../models');
  *
  * @package src/services
  */
-class UserService
-{
+class UserService {
     /**
      * Получить список всех аккаунтов в системе
      *
      * @param params Входные параметры запроса
      * @return Array Список аккаунтов в системе
      */
-    async getAll(params)
-    {
+    async getAll(params) {
         this.accessCheck(params);
 
         let response = [];
@@ -31,8 +29,7 @@ class UserService
             },
         });
 
-        users.forEach(user =>
-        {
+        users.forEach(user => {
             response.push({
                 id: user.id,
                 name: user.name,
@@ -50,8 +47,7 @@ class UserService
      * @param params Входные параметры запроса
      * @return Object Добавленный аккаунт
      */
-    async addOne(params)
-    {
+    async addOne(params) {
         this.accessCheck(params);
 
         const { name, login, password, role } = params.body;
@@ -97,8 +93,7 @@ class UserService
      * @param params Входные параметры запроса
      * @return Object Данные обновленного аккаунта
      */
-    async updateOne(params)
-    {
+    async updateOne(params) {
         this.accessCheck(params);
 
         const { id, name, login, role, password } = params.body;
@@ -122,26 +117,32 @@ class UserService
         const hashedPassword = await argon2.hash(password);
 
         if (password !== '') {
-            return User.update({
-                login: login,
-                name: name,
-                roleId: roleExists.id,
-                passHash: hashedPassword,
-            }, {
-                where: {
-                    id: id,
+            return User.update(
+                {
+                    login: login,
+                    name: name,
+                    roleId: roleExists.id,
+                    passHash: hashedPassword,
                 },
-            });
+                {
+                    where: {
+                        id: id,
+                    },
+                }
+            );
         } else {
-            return User.update({
-                login: login,
-                name: name,
-                roleId: roleExists.id,
-            }, {
-                where: {
-                    id: id,
+            return User.update(
+                {
+                    login: login,
+                    name: name,
+                    roleId: roleExists.id,
                 },
-            });
+                {
+                    where: {
+                        id: id,
+                    },
+                }
+            );
         }
     }
 
@@ -151,8 +152,7 @@ class UserService
      * @param params Входные параметры запроса
      * @return Object Данные удаленного аккаунта
      */
-    async deleteOne(params)
-    {
+    async deleteOne(params) {
         this.accessCheck(params);
         const { id } = params.body;
 
@@ -169,8 +169,7 @@ class UserService
      *
      * @param params Входные параметры запроса
      */
-    accessCheck(params)
-    {
+    accessCheck(params) {
         if (!['admin'].includes(params.user.role)) {
             throw new Error('Нет прав доступа');
         }
@@ -184,8 +183,7 @@ class UserService
      * @option
      * @return Promise Аккаунт / undefined
      */
-    async isUserExists(name, login)
-    {
+    async isUserExists(name, login) {
         return await User.findOne({
             where: {
                 [Op.or]: [
@@ -194,7 +192,8 @@ class UserService
                     },
                     {
                         name: name,
-                    },],
+                    },
+                ],
             },
         });
     }
@@ -205,8 +204,7 @@ class UserService
      * @param role Роль для проверки на наличие
      * @return Promise Роль / undefined
      */
-    async isRoleExists(role)
-    {
+    async isRoleExists(role) {
         return Role.findOne({
             where: {
                 role: role,

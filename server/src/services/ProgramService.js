@@ -6,8 +6,7 @@ const { Event, Program, User } = require('../../models');
  *
  * @package src/services
  */
-class ProgramService
-{
+class ProgramService {
     /**
      * Получить список всех собственных программ пользователя, не вложенных в композиции
      *
@@ -16,8 +15,7 @@ class ProgramService
      *
      * @return Promise<json> Запрашиваемые данные в виде объекта
      */
-    async getAll(params)
-    {
+    async getAll(params) {
         const { user } = params;
         this.checkRole(user.role);
 
@@ -25,7 +23,6 @@ class ProgramService
             nest: true,
             where: {
                 authorId: user.userId,
-                composeId: null,
             },
             include: [
                 {
@@ -41,12 +38,9 @@ class ProgramService
             ],
             order: [
                 ['createdAt', 'DESC'],
-                [
-                    { model: Event, as: 'events' },
-                    'order', 'ASC'
-                ],
+                [{ model: Event, as: 'events' }, 'order', 'ASC'],
             ],
-            attributes: ['id', 'name'],
+            attributes: ['id', 'name', 'composeId'],
         });
     }
 
@@ -56,8 +50,7 @@ class ProgramService
      * @param params Входные GET параметры
      * @return Promise<Event> Список событий программы
      */
-    async getOne(params)
-    {
+    async getOne(params) {
         const { user } = params;
         this.checkRole(user.role);
 
@@ -79,13 +72,8 @@ class ProgramService
                     model: User,
                 },
             ],
-            order: [
-                [
-                    { model: Event, as: 'events' },
-                    'order', 'ASC'
-                ],
-            ],
-            attributes: ['id', 'name'],
+            order: [[{ model: Event, as: 'events' }, 'order', 'ASC']],
+            attributes: ['id', 'name', 'composeId'],
         });
     }
 
@@ -95,8 +83,7 @@ class ProgramService
      * @param params Входные POST параметры
      * @return Promise<Program> Новая программа
      */
-    async addOne(params)
-    {
+    async addOne(params) {
         const { user } = params;
         this.checkRole(user.role);
 
@@ -152,7 +139,7 @@ class ProgramService
             case 'default':
                 try {
                     await Event.create({
-                        name: "Объявления в системе",
+                        name: 'Объявления в системе',
                         src: '/adscast',
                         order: 1,
                         isActive: true,
@@ -161,7 +148,7 @@ class ProgramService
                         programId: program.id,
                     });
                     await Event.create({
-                        name: "Карта К3",
+                        name: 'Карта К3',
                         src: 'http://webrobo.mgul.ac.ru:3000/forms/K3_Pascal_map/',
                         order: 2,
                         isActive: true,
@@ -170,7 +157,7 @@ class ProgramService
                         programId: program.id,
                     });
                     await Event.create({
-                        name: "Карта Артек",
+                        name: 'Карта Артек',
                         src: 'http://webrobo.mgul.ac.ru:3000/forms/Artek_Pascal_map/',
                         order: 3,
                         isActive: true,
@@ -179,7 +166,7 @@ class ProgramService
                         programId: program.id,
                     });
                     await Event.create({
-                        name: "К3 - Артек",
+                        name: 'К3 - Артек',
                         src: 'http://webrobo.mgul.ac.ru:3000/forms/K3-Artek/',
                         order: 4,
                         isActive: true,
@@ -188,7 +175,7 @@ class ProgramService
                         programId: program.id,
                     });
                     await Event.create({
-                        name: "Аудитории - Гидра",
+                        name: 'Аудитории - Гидра',
                         src: 'http://webrobo.mgul.ac.ru:3000/forms/Hydra-K3g/',
                         order: 5,
                         isActive: true,
@@ -197,7 +184,7 @@ class ProgramService
                         programId: program.id,
                     });
                     await Event.create({
-                        name: "Гидра - Влажность",
+                        name: 'Гидра - Влажность',
                         src: 'http://webrobo.mgul.ac.ru:3000/forms/TV_Hum/',
                         order: 6,
                         isActive: true,
@@ -206,7 +193,7 @@ class ProgramService
                         programId: program.id,
                     });
                     await Event.create({
-                        name: "Гидра - Температура",
+                        name: 'Гидра - Температура',
                         src: 'http://webrobo.mgul.ac.ru:3000/forms/TV_Temp/',
                         order: 7,
                         isActive: true,
@@ -233,12 +220,22 @@ class ProgramService
      * @param params Входные POST параметры
      * @return Promise<Event> Обновленный список событий внутри программы
      */
-    async updateOne(params)
-    {
+    async updateOne(params) {
         const { user } = params;
         this.checkRole(user.role);
 
         const { id, events } = params?.body;
+
+        const program = await Program.findOne({
+            where: {
+                id: id,
+            },
+            attributes: ['id', 'name', 'composeId'],
+        });
+
+        if (program instanceof Program && program.composeId !== null) {
+            throw new Error('Cannot update included into compose program');
+        }
 
         await Event.destroy({
             where: {
@@ -278,8 +275,7 @@ class ProgramService
      *
      * @param params Входные GET параметры
      */
-    async deleteOne(params)
-    {
+    async deleteOne(params) {
         const { user } = params;
         this.checkRole(user.role);
 
@@ -294,12 +290,11 @@ class ProgramService
 
     /**
      * Получить список программ, доступных для замены в композициях
-     * 
+     *
      * @param {*} params Входные GET-параметры
      * @returns Promise<Program> Список собственных не использованных программ пользователя
      */
-    async selfPrograms(params)
-    {
+    async selfPrograms(params) {
         const { user } = params;
         this.checkRole(user.role);
 
@@ -309,9 +304,7 @@ class ProgramService
                 authorId: user.userId,
                 composeId: null,
             },
-            order: [
-                ['createdAt', 'DESC'],
-            ],
+            order: [['createdAt', 'DESC']],
             attributes: ['id', 'name'],
         });
     }
@@ -321,8 +314,7 @@ class ProgramService
      *
      * @param role Роль пользователя в системе
      */
-    checkRole(role)
-    {
+    checkRole(role) {
         if (!['admin', 'moderator', 'editor'].includes(role)) {
             throw new Error('Недостаточно прав доступа');
         }

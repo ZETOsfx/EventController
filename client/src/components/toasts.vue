@@ -1,9 +1,14 @@
+<script>
+export default {
+    props: ['time', 'successCb', 'errorCb', 'infoCb'],
+}
+</script>
+
 <template>
     <!-- Группировка toasts -->
     <div class="toast-container bottom-0 end-0 p-3">
         <!-- Успешно -->
-        <div class="toast fade text-bg-success" role="alert" id="ToastSuccess" aria-live="assertive" aria-atomic="true"
-            data-bs-delay="10000">
+        <div class="toast fade text-bg-success" role="alert" id="ToastSuccess" aria-live="assertive" aria-atomic="true" data-bs-delay="10000">
             <div class="toast-header">
                 <rect width="100%" height="100%" fill="#007aff"></rect>
                 <strong class="me-auto">Успешно!</strong>
@@ -16,8 +21,7 @@
         </div>
 
         <!-- Ошибка -->
-        <div class="toast fade text-bg-danger" role="alert" id="ToastError" aria-live="assertive" aria-atomic="true"
-            data-bs-delay="10000">
+        <div class="toast fade text-bg-danger" role="alert" id="ToastError" aria-live="assertive" aria-atomic="true" data-bs-delay="10000">
             <div class="toast-header">
                 <rect width="100%" height="100%" fill="#007aff"></rect>
                 <strong class="me-auto">Произошла ошибка!</strong>
@@ -30,8 +34,7 @@
         </div>
 
         <!-- Инфо -->
-        <div class="toast fade text-bg-info" role="alert" id="ToastInfo" aria-live="assertive" aria-atomic="true"
-            data-bs-delay="10000">
+        <div class="toast fade text-bg-info" role="alert" id="ToastInfo" aria-live="assertive" aria-atomic="true" data-bs-delay="10000">
             <div class="toast-header">
                 <rect width="100%" height="100%" fill="#007aff"></rect>
                 <strong class="me-auto">Уведомление</strong>
@@ -45,9 +48,3 @@
 
     </div>
 </template>
-
-<script>
-export default {
-    props: ['time', 'successCb', 'errorCb', 'infoCb'],
-}
-</script>

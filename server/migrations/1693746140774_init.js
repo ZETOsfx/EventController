@@ -1,11 +1,10 @@
 /* Поднятие базовых таблиц (со связями) + Стандартный профиль администратора */
-const { PgLiteral } = require("node-pg-migrate");
+const { PgLiteral } = require('node-pg-migrate');
 
 exports.shorthands = undefined;
 
-exports.up = (pgm) =>
-{
-    pgm.createExtension("uuid-ossp", {
+exports.up = pgm => {
+    pgm.createExtension('uuid-ossp', {
         ifNotExists: true,
     });
 
@@ -14,8 +13,8 @@ exports.up = (pgm) =>
      */
     pgm.createTable('roles', {
         id: {
-            type: "uuid",
-            default: new PgLiteral("uuid_generate_v4()"),
+            type: 'uuid',
+            default: new PgLiteral('uuid_generate_v4()'),
             notNull: true,
             primaryKey: true,
         },
@@ -31,8 +30,8 @@ exports.up = (pgm) =>
     });
     pgm.createTable('users', {
         id: {
-            type: "uuid",
-            default: new PgLiteral("uuid_generate_v4()"),
+            type: 'uuid',
+            default: new PgLiteral('uuid_generate_v4()'),
             notNull: true,
             primaryKey: true,
         },
@@ -42,7 +41,7 @@ exports.up = (pgm) =>
             notNull: true,
         },
         role_id: {
-            type: "uuid",
+            type: 'uuid',
             notNull: true,
             references: '"roles" (id)',
             onDelete: 'cascade',
@@ -72,8 +71,8 @@ exports.up = (pgm) =>
      */
     pgm.createTable('subscribes', {
         id: {
-            type: "uuid",
-            default: new PgLiteral("uuid_generate_v4()"),
+            type: 'uuid',
+            default: new PgLiteral('uuid_generate_v4()'),
             notNull: true,
             primaryKey: true,
         },
@@ -86,23 +85,23 @@ exports.up = (pgm) =>
             default: pgm.func('NOW()'),
             notNull: true,
         },
-    })
+    });
     pgm.createTable('user_subscribe', {
         id: {
-            type: "uuid",
-            default: new PgLiteral("uuid_generate_v4()"),
+            type: 'uuid',
+            default: new PgLiteral('uuid_generate_v4()'),
             notNull: true,
             primaryKey: true,
         },
         user_id: {
-            type: "uuid",
+            type: 'uuid',
             notNull: true,
             references: '"users" (id)',
             onDelete: 'cascade',
             onUpdate: 'cascade',
         },
         subscribe_id: {
-            type: "uuid",
+            type: 'uuid',
             notNull: true,
             references: '"subscribes" (id)',
             onDelete: 'cascade',
@@ -120,8 +119,8 @@ exports.up = (pgm) =>
      */
     pgm.createTable('composes', {
         id: {
-            type: "uuid",
-            default: new PgLiteral("uuid_generate_v4()"),
+            type: 'uuid',
+            default: new PgLiteral('uuid_generate_v4()'),
             notNull: true,
             primaryKey: true,
         },
@@ -142,7 +141,7 @@ exports.up = (pgm) =>
             notNull: true,
         },
         author_id: {
-            type: "uuid",
+            type: 'uuid',
             notNull: true,
             references: '"users" (id)',
             onDelete: 'cascade',
@@ -164,8 +163,8 @@ exports.up = (pgm) =>
     });
     pgm.createTable('programs', {
         id: {
-            type: "uuid",
-            default: new PgLiteral("uuid_generate_v4()"),
+            type: 'uuid',
+            default: new PgLiteral('uuid_generate_v4()'),
             notNull: true,
             primaryKey: true,
         },
@@ -174,14 +173,14 @@ exports.up = (pgm) =>
             notNull: true,
         },
         author_id: {
-            type: "uuid",
+            type: 'uuid',
             notNull: true,
             references: '"users" (id)',
             onDelete: 'cascade',
             onUpdate: 'cascade',
         },
         compose_id: {
-            type: "uuid",
+            type: 'uuid',
             notNull: false,
             references: '"composes" (id)',
             onDelete: 'set null',
@@ -204,8 +203,8 @@ exports.up = (pgm) =>
     });
     pgm.createTable('events', {
         id: {
-            type: "uuid",
-            default: new PgLiteral("uuid_generate_v4()"),
+            type: 'uuid',
+            default: new PgLiteral('uuid_generate_v4()'),
             notNull: true,
             primaryKey: true,
         },
@@ -234,7 +233,7 @@ exports.up = (pgm) =>
             notNull: true,
         },
         program_id: {
-            type: "uuid",
+            type: 'uuid',
             notNull: true,
             references: '"programs" (id)',
             onDelete: 'cascade',
@@ -243,13 +242,13 @@ exports.up = (pgm) =>
     });
     pgm.createTable('requests', {
         id: {
-            type: "uuid",
-            default: new PgLiteral("uuid_generate_v4()"),
+            type: 'uuid',
+            default: new PgLiteral('uuid_generate_v4()'),
             notNull: true,
             primaryKey: true,
         },
         compose_id: {
-            type: "uuid",
+            type: 'uuid',
             notNull: true,
             references: '"composes" (id)',
             onDelete: 'cascade',
@@ -280,6 +279,11 @@ exports.up = (pgm) =>
             default: pgm.func('NOW()'),
             notNull: true,
         },
+        updated_at: {
+            type: 'timestamp',
+            default: pgm.func('NOW()'),
+            notNull: true,
+        },
     });
 
     /**
@@ -287,8 +291,8 @@ exports.up = (pgm) =>
      */
     pgm.createTable('notes', {
         id: {
-            type: "uuid",
-            default: new PgLiteral("uuid_generate_v4()"),
+            type: 'uuid',
+            default: new PgLiteral('uuid_generate_v4()'),
             notNull: true,
             primaryKey: true,
         },
@@ -297,7 +301,7 @@ exports.up = (pgm) =>
             notNull: true,
         },
         comment: {
-            type: 'text',
+            type: 'varchar(300)',
             notNull: false,
         },
         expires: {
@@ -305,7 +309,7 @@ exports.up = (pgm) =>
             notNull: true,
         },
         author_id: {
-            type: "uuid",
+            type: 'uuid',
             notNull: true,
             references: '"users" (id)',
             onDelete: 'cascade',
@@ -329,20 +333,20 @@ exports.up = (pgm) =>
 
     pgm.createTable('user_note', {
         id: {
-            type: "uuid",
-            default: new PgLiteral("uuid_generate_v4()"),
+            type: 'uuid',
+            default: new PgLiteral('uuid_generate_v4()'),
             notNull: true,
             primaryKey: true,
         },
         user_id: {
-            type: "uuid",
+            type: 'uuid',
             notNull: true,
             references: '"users" (id)',
             onDelete: 'cascade',
             onUpdate: 'cascade',
         },
         note_id: {
-            type: "uuid",
+            type: 'uuid',
             notNull: true,
             references: '"notes" (id)',
             onDelete: 'cascade',
@@ -361,8 +365,8 @@ exports.up = (pgm) =>
      */
     pgm.createTable('files', {
         id: {
-            type: "uuid",
-            default: new PgLiteral("uuid_generate_v4()"),
+            type: 'uuid',
+            default: new PgLiteral('uuid_generate_v4()'),
             notNull: true,
             primaryKey: true,
         },
@@ -387,7 +391,7 @@ exports.up = (pgm) =>
             notNull: true,
         },
         author_id: {
-            type: "uuid",
+            type: 'uuid',
             notNull: true,
             references: '"users" (id)',
             onDelete: 'cascade',
@@ -425,8 +429,7 @@ exports.up = (pgm) =>
     );`);
 };
 
-exports.down = (pgm) =>
-{
+exports.down = pgm => {
     pgm.dropTable('files');
     pgm.dropTable('user_note');
     pgm.dropTable('notes');
@@ -439,5 +442,5 @@ exports.down = (pgm) =>
     pgm.dropTable('users');
     pgm.dropTable('roles');
 
-    pgm.dropExtension("uuid-ossp");
+    pgm.dropExtension('uuid-ossp');
 };

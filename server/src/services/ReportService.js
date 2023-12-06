@@ -1,6 +1,6 @@
 require('dotenv').config();
 
-const { Note, User } = require('../../models');
+const { User } = require('../../models');
 const messageService = require('./MessageService');
 
 const nodemailer = require('nodemailer');
@@ -12,16 +12,14 @@ const Mailgen = require('mailgen');
  *
  * @package src/services
  */
-class ReportService
-{
+class ReportService {
     /**
      * Отправить отчет об ошибке в системе
      *
      * @param params Входные POST параметры
      * @return string Сообщение об успешной отправке
      */
-    async sendReport(params)
-    {
+    async sendReport(params) {
         const { user } = params;
         const { short, description, browserData, osData } = params.body;
 
@@ -45,7 +43,7 @@ class ReportService
             product: {
                 name: 'Команда EventController',
                 link: 'http://rstring.mgul.ac.ru',
-            }
+            },
         });
 
         const currentDate = new Date();
@@ -57,8 +55,8 @@ class ReportService
                 title: 'Пользователь ' + user.name + ' уведомляет об ошибке.',
                 intro: short,
                 outro: [description, 'Время ошибки: ' + currentDate, 'Браузер пользователя: ' + browserData, 'ОС пользователя: ' + osData],
-                signature: 'C уважением'
-            }
+                signature: 'C уважением',
+            },
         });
 
         let message = {
@@ -66,7 +64,7 @@ class ReportService
             to: '"Почта яндекс" <' + process.env.TARGET_EMAIL + '>, "Почта МГТУ" <' + process.env.EMAIL + '>',
             subject: 'Bug report',
             html: mail,
-            sender: 'Команда EventController'
+            sender: 'Команда EventController',
         };
 
         try {

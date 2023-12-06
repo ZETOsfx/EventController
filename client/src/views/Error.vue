@@ -1,99 +1,93 @@
 <script>
-import gsap from 'gsap'
+import gsap from 'gsap';
 export default {
     data() {
-          return {
-
-          }
+        return {};
     },
     methods: {
         animate() {
-            gsap.set("svg", { visibility: "visible" });
-            gsap.to("#headStripe", {
+            gsap.set('svg', { visibility: 'visible' });
+            gsap.to('#headStripe', {
                 y: 0.5,
                 rotation: 1,
                 yoyo: true,
                 repeat: -1,
-                ease: "sine.inOut",
-                duration: 1
+                ease: 'sine.inOut',
+                duration: 1,
             });
-            gsap.to("#spaceman", {
+            gsap.to('#spaceman', {
                 y: 0.5,
                 rotation: 1,
                 yoyo: true,
                 repeat: -1,
-                ease: "sine.inOut",
-                duration: 1
+                ease: 'sine.inOut',
+                duration: 1,
             });
-            gsap.to("#craterSmall", {
+            gsap.to('#craterSmall', {
                 x: -3,
                 yoyo: true,
                 repeat: -1,
                 duration: 1,
-                ease: "sine.inOut"
+                ease: 'sine.inOut',
             });
-            gsap.to("#craterBig", {
+            gsap.to('#craterBig', {
                 x: 3,
                 yoyo: true,
                 repeat: -1,
                 duration: 1,
-                ease: "sine.inOut"
+                ease: 'sine.inOut',
             });
-            gsap.to("#planet", {
+            gsap.to('#planet', {
                 rotation: -2,
                 yoyo: true,
                 repeat: -1,
                 duration: 1,
-                ease: "sine.inOut",
-                transformOrigin: "50% 50%"
+                ease: 'sine.inOut',
+                transformOrigin: '50% 50%',
             });
 
-            gsap.to("#starsBig g", {
-                rotation: "random(-30,30)",
-                transformOrigin: "50% 50%",
+            gsap.to('#starsBig g', {
+                rotation: 'random(-30,30)',
+                transformOrigin: '50% 50%',
                 yoyo: true,
                 repeat: -1,
-                ease: "sine.inOut"
+                ease: 'sine.inOut',
             });
-            gsap.fromTo(
-                "#starsSmall g",
-                { scale: 0, transformOrigin: "50% 50%" },
-                { scale: 1, transformOrigin: "50% 50%", yoyo: true, repeat: -1, stagger: 0.1 }
-            );
-            gsap.to("#circlesSmall circle", {
+            gsap.fromTo('#starsSmall g', { scale: 0, transformOrigin: '50% 50%' }, { scale: 1, transformOrigin: '50% 50%', yoyo: true, repeat: -1, stagger: 0.1 });
+            gsap.to('#circlesSmall circle', {
                 y: -4,
                 yoyo: true,
                 duration: 1,
-                ease: "sine.inOut",
-                repeat: -1
+                ease: 'sine.inOut',
+                repeat: -1,
             });
-            gsap.to("#circlesBig circle", {
+            gsap.to('#circlesBig circle', {
                 y: -2,
                 yoyo: true,
                 duration: 1,
-                ease: "sine.inOut",
-                repeat: -1
+                ease: 'sine.inOut',
+                repeat: -1,
             });
 
-            gsap.set("#glassShine", { x: -68 });
+            gsap.set('#glassShine', { x: -68 });
 
-            gsap.to("#glassShine", {
+            gsap.to('#glassShine', {
                 x: 80,
                 duration: 2,
                 rotation: -30,
-                ease: "expo.inOut",
-                transformOrigin: "50% 50%",
+                ease: 'expo.inOut',
+                transformOrigin: '50% 50%',
                 repeat: -1,
                 repeatDelay: 8,
-                delay: 2
+                delay: 2,
             });
-        }
+        },
     },
     mounted() {
         this.animate();
         this.$router.push('/404');
-    }
-}
+    },
+};
 </script>
 
 <template>
@@ -102,8 +96,7 @@ export default {
             <div class="containerError">
                 <div class="row">
                     <div class="col-md-6 align-self-center">
-                        <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-                             viewBox="0 0 800 600" class="svgError">
+                        <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 800 600" class="svgError">
                             <g>
                                 <defs>
                                     <clipPath id="GlassClip">
@@ -229,9 +222,8 @@ export default {
                     <div class="col-md-6 align-self-center">
                         <h1 class="ErrorH1 ms-3">404</h1>
                         <h2 class="ErrorH2 ms-3">О неет, похоже, что ты потерялся :(</h2>
-                        <p class="ms-3">Страница, на которую вы хотели зайти, похоже, не существует. Ну или у вас не хватает прав, чтобы её посетить. Как вы сюда попали - остается загадкой, но вы можете нажать на кнопку ниже, чтобы вернуться на главную :3
-                        </p>
-                        <a href='/index' class="btn btn-outline-success ms-3 mb-5">На Главную Страницу</a>
+                        <p class="ms-3">Страница, на которую вы хотели зайти, похоже, не существует. Ну или у вас не хватает прав, чтобы её посетить. Как вы сюда попали - остается загадкой, но вы можете нажать на кнопку ниже, чтобы вернуться на главную :3</p>
+                        <a href="/index" class="btn btn-outline-success ms-3 mb-5">На Главную Страницу</a>
                     </div>
                 </div>
             </div>
@@ -247,7 +239,7 @@ export default {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family:"Nunito Sans";
+    font-family: 'Nunito Sans';
     font-size: 1em;
 }
 
@@ -255,22 +247,25 @@ svg {
     width: 100%;
     visibility: hidden;
 }
+
 .ErrorH1 {
     font-size: 7.5em;
     margin: 15px 0px;
-    font-weight:bold;
-}
-.ErrorH2 {
-    font-weight:bold;
+    font-weight: bold;
 }
 
-@media screen and (max-width:768px) {
+.ErrorH2 {
+    font-weight: bold;
+}
+
+@media screen and (max-width: 768px) {
     main {
-        display:block;
+        display: block;
     }
+
     .containerError {
-        margin-top:70px;
-        margin-bottom:70px;
+        margin-top: 70px;
+        margin-bottom: 70px;
     }
 }
 </style>

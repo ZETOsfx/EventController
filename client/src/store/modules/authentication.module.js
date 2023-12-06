@@ -2,58 +2,47 @@ import { router } from '../../router';
 import { userService } from '../../services/user.service';
 
 const user = JSON.parse(localStorage.getItem('user'));
-const initialState = user
-    ? { status: { loggedIn: true }, user }
-    : { status: {}, user: null };
+const initialState = user ? { status: { loggedIn: true }, user } : { status: {}, user: null };
 
 export const authentication = {
     namespaced: true,
     state: initialState,
     actions: {
-        login({ dispatch, commit }, { username, password })
-        {
+        login({ dispatch, commit }, { username, password }) {
             commit('loginRequest', { username });
 
-            userService.login(username, password)
-                .then(
-                    user =>
-                    {
-                        commit('loginSuccess', user);
-                        router.push('/');
-                    },
-                    error =>
-                    {
-                        commit('loginFailure', error);
-                        dispatch('alert/error', error, { root: true });
-                    }
-                );
+            userService.login(username, password).then(
+                user => {
+                    commit('loginSuccess', user);
+                    router.push('/');
+                },
+                error => {
+                    commit('loginFailure', error);
+                    dispatch('alert/error', error, { root: true });
+                }
+            );
         },
-        logout({ commit })
-        {
+        logout({ commit }) {
             userService.logout();
             commit('logout');
-        }
+        },
     },
     mutations: {
-        loginRequest(state, user)
-        {
+        loginRequest(state, user) {
             state.status = { loggingIn: true };
             state.user = user;
         },
-        loginSuccess(state, user)
-        {
+        loginSuccess(state, user) {
             state.status = { loggedIn: true };
             state.user = user;
         },
-        loginFailure(state)
-        {
+        loginFailure(state) {
             state.status = {};
             state.user = null;
         },
-        logout(state)
-        {
+        logout(state) {
             state.status = {};
             state.user = null;
-        }
-    }
-}
+        },
+    },
+};
