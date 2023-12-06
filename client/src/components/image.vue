@@ -1,17 +1,14 @@
 <template>
-  <img :src="src" alt="">
+    <img :src="src" alt="" />
 </template>
 
 <script>
 export default {
-  props: ['src'],
-  data() {
-    return {
-    }
-  },
-  methods: {
-  },
-  mounted() {
-  }
-}
+    props: ['src'],
+    data() {
+        return {};
+    },
+    methods: {},
+    mounted() {},
+};
 </script>

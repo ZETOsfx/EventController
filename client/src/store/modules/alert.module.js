@@ -2,7 +2,7 @@ export const alert = {
     namespaced: true,
     state: {
         type: null,
-        message: null
+        message: null,
     },
     actions: {
         success({ commit }, message) {
@@ -13,7 +13,7 @@ export const alert = {
         },
         clear({ commit }) {
             commit('clear');
-        }
+        },
     },
     mutations: {
         success(state, message) {
@@ -27,6 +27,6 @@ export const alert = {
         clear(state) {
             state.type = null;
             state.message = null;
-        }
-    }
-}
+        },
+    },
+};

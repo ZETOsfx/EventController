@@ -2,9 +2,7 @@ import { router } from '../../router';
 import { userService } from '../../services/user.service';
 
 const user = JSON.parse(localStorage.getItem('user'));
-const initialState = user
-    ? { status: { loggedIn: true }, user }
-    : { status: {}, user: null };
+const initialState = user ? { status: { loggedIn: true }, user } : { status: {}, user: null };
 
 export const authentication = {
     namespaced: true,
@@ -12,23 +10,22 @@ export const authentication = {
     actions: {
         login({ dispatch, commit }, { username, password }) {
             commit('loginRequest', { username });
-                
-            userService.login(username, password)
-                .then(
-                    user => {
-                        commit('loginSuccess', user);
-                        router.push('/');
-                    },
-                    error => {
-                        commit('loginFailure', error);
-                        dispatch('alert/error', error, { root: true });
-                    }
-                );
+
+            userService.login(username, password).then(
+                user => {
+                    commit('loginSuccess', user);
+                    router.push('/');
+                },
+                error => {
+                    commit('loginFailure', error);
+                    dispatch('alert/error', error, { root: true });
+                }
+            );
         },
         logout({ commit }) {
             userService.logout();
             commit('logout');
-        }
+        },
     },
     mutations: {
         loginRequest(state, user) {
@@ -46,6 +43,6 @@ export const authentication = {
         logout(state) {
             state.status = {};
             state.user = null;
-        }
-    }
-}
+        },
+    },
+};

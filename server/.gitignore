@@ -7,6 +7,7 @@ dump.rdb
 ../crontabfile
 ../entrypoint.bash
 src/logger
+*redisConfig*
 
 # Logs
 logs
@@ -24,6 +25,8 @@ node_modules
 dist
 dist-ssr
 *.local
+config/default.json
+config/config.json
 
 # Editor directories and files
 .vscode

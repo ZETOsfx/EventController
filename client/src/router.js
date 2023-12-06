@@ -1,36 +1,36 @@
-import { createRouter, createWebHistory } from "vue-router";
-import Editor   from './views/Editor.vue';
-import Moders   from './views/Moder.vue';
-import Manager  from './views/Manager.vue';
-import AdsCast  from './views/AdsCast.vue';
-import Admins   from './views/Admin.vue';
-import Uploads  from './views/FileUpload.vue';
-import Index    from './views/MainPage.vue';
-import Guide    from './views/Guide.vue';
-import Login    from './views/Auth.vue';
+import { createRouter, createWebHistory } from 'vue-router';
+import Admin from './views/Admin.vue';
+import AdsCast from './views/AdsCast.vue';
+import Login from './views/Auth.vue';
+import BugRep from './views/BugReport.vue';
+import Cast from './views/Cast.vue';
+import Editor from './views/Editor.vue';
 import NotFound from './views/Error.vue';
-import Cast     from './views/Cast.vue';
-import BugRep   from './views/BugReport.vue';
-import Remote   from './views/Remote.vue';
+import Uploads from './views/FileUpload.vue';
+import Guide from './views/Guide.vue';
+import Index from './views/MainPage.vue';
+import Manager from './views/Manager.vue';
+import Moder from './views/Moder.vue';
+import Remote from './views/Remote.vue';
 
 export const router = createRouter({
     history: createWebHistory(),
     routes: [
-        {   path: '/', redirect: '/index' },
+        { path: '/', redirect: '/index' },
         {
             path: '/index',
             name: 'MainPage',
-            component: Index
+            component: Index,
         },
         {
             path: '/login',
             name: 'SignIn',
-            component: Login
+            component: Login,
         },
         {
             path: '/guide',
             name: 'Guide',
-            component: Guide
+            component: Guide,
         },
         {
             path: '/event',
@@ -38,26 +38,26 @@ export const router = createRouter({
             component: Editor,
             meta: {
                 needsAuth: true,
-                roles: ['editor', 'moder', 'admin']
-            }
+                roles: ['editor', 'moderator', 'admin'],
+            },
         },
         {
             path: '/account',
             name: 'Admin',
-            component: Admins,
+            component: Admin,
             meta: {
                 needsAuth: true,
-                roles: ['admin']
-            }
+                roles: ['admin'],
+            },
         },
         {
             path: '/moder',
             name: 'Moder',
-            component: Moders,
+            component: Moder,
             meta: {
                 needsAuth: true,
-                roles: ['moder', 'admin']
-            }
+                roles: ['moderator', 'admin'],
+            },
         },
         {
             path: '/note',
@@ -67,12 +67,16 @@ export const router = createRouter({
         {
             path: '/adscast',
             name: 'Adscast',
-            component: AdsCast
+            component: AdsCast,
         },
         {
             path: '/remote',
             name: 'Remote',
-            component: Remote
+            component: Remote,
+            meta: {
+                needsAuth: true,
+                roles: ['editor', 'moderator', 'admin', 'manager'],
+            },
         },
         {
             path: '/upload',
@@ -80,8 +84,8 @@ export const router = createRouter({
             component: Uploads,
             meta: {
                 needsAuth: true,
-                roles: ['editor', 'moder', 'admin', 'adsender']
-            }
+                roles: ['editor', 'moderator', 'admin', 'manager'],
+            },
         },
         {
             path: '/bugreport',
@@ -89,33 +93,36 @@ export const router = createRouter({
             component: BugRep,
             meta: {
                 needsAuth: true,
-                roles: ['editor', 'moder', 'admin', 'adsender']
-            }
+                roles: ['editor', 'moderator', 'admin', 'manager'],
+            },
         },
         {
             path: '/cast',
             name: 'Broadcast',
-            component: Cast
+            component: Cast,
         },
         {
             path: '/:pathMatch(.*)*',
             name: '404',
-            component: NotFound
-        }
-    ]
+            component: NotFound,
+        },
+    ],
 });
 
-    // Route protect
+/**
+ * Защита маршрутов (доступ только для авторизованных пользователей с соответствующей ролью)
+ */
 router.beforeEach((to, from, next) => {
-    if (to.meta.needsAuth) {
-        let user = JSON.parse(localStorage.getItem('user'));
-        if (user)
-            if (to.meta.roles.includes(user.role)) 
-                return next();
-            else 
-                return next('/404');
-        else
-            return next('/login');
+    if (!to.meta.needsAuth) {
+        return next();
     }
-    return next();
-}); 
+    let user = JSON.parse(localStorage.getItem('user'));
+    if (!user) {
+        return next('/login');
+    }
+    if (to.meta.roles.includes(user.role.role)) {
+        return next();
+    } else {
+        return next('/404');
+    }
+});

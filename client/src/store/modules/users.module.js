@@ -1,20 +1,19 @@
-import { userService } from "../../services/user.service"; 
+import { userService } from '../../services/user.service';
 
 export const users = {
     namespaced: true,
     state: {
-        all: {}
+        all: {},
     },
     actions: {
         getAll({ commit }) {
             commit('getAllRequest');
 
-            userService.getAll()
-                .then(
-                    users => commit('getAllSuccess', users),
-                    error => commit('getAllFailure', error)
-                );
-        }
+            userService.getAll().then(
+                users => commit('getAllSuccess', users),
+                error => commit('getAllFailure', error)
+            );
+        },
     },
     mutations: {
         getAllRequest(state) {
@@ -25,6 +24,6 @@ export const users = {
         },
         getAllFailure(state, error) {
             state.all = { error };
-        }
-    }
-}
+        },
+    },
+};
