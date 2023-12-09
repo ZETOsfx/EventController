@@ -1,6 +1,6 @@
 <script>
 export default {
-    inject: ['session', 'socket', 'options', 'toast', 'clickBlock'],
+    inject: ['session', 'socket', 'toast', 'clickBlock', 'request'],
     data() {
         return {
             notes: [],
@@ -29,6 +29,7 @@ export default {
             //     this.notes.splice(dex, 1);
             // });
         },
+
         getClass(ad) {
             return {
                 'list-group-item list-group-item-info justify-content-between align-items-center': ad.addressedTo === this.session().name && ad.name.includes('отправлен'),
@@ -37,6 +38,7 @@ export default {
                 'list-group-item justify-content-between align-items-center': ad.addressedTo !== this.session().name,
             };
         },
+
         setCalendar() {
             let date_ob = new Date();
             let dd = ('0' + date_ob.getDate()).slice(-2);
@@ -50,43 +52,19 @@ export default {
             document.getElementById('addDate').max = maxDate;
             document.getElementById('addDate').value = minDate;
         },
-        async getAllNotes() {
-            let response;
-            if (this.session().loggedin) {
-                response = await fetch(`/notes/read`, {
-                    method: 'GET',
-                    headers: new Headers({
-                        'Content-Type': 'application/json',
-                        Accept: 'application/json',
-                        'Access-Control-Allow-Origin': '*',
-                        sameSite: ' None; Secure',
-                        'x-access-token': JSON.parse(localStorage.getItem('user')).token,
-                    }),
-                });
-            } else {
-                response = await fetch(`/notes/cast`, {
-                    method: 'GET',
-                    headers: new Headers({
-                        'Content-Type': 'application/json',
-                        Accept: 'application/json',
-                        'Access-Control-Allow-Origin': '*',
-                    }),
-                });
-            }
-            response = await response.json();
 
-            if (response.status === 'success') {
-                this.notes = response.data;
-            } else {
-                this.toast('error', 'Что-то пошло не так :(');
-            }
+        async getAllNotes() {
+            let response = await this.request('/notes/' + (this.session().loggedin ? 'read' : 'cast'), 'GET');
+            response.status === 'success' ? (this.notes = response.data) : this.toast('error', 'Что-то пошло не так :(');
         },
+
         clearFlags() {
             this.noteName = '';
             this.noteDescription = '';
             this.noteIsEndless = false;
             this.giveNoteOnCast = false;
         },
+
         async addNote() {
             if (this.noteName.length > 100) {
                 this.toast('error', 'Длина заголовка не должна превышать 100 символов.');
@@ -97,41 +75,34 @@ export default {
                 return;
             }
 
-            let response = await fetch(
-                '/notes/add',
-                this.options('POST', {
-                    name: this.noteName,
-                    comment: this.noteDescription,
-                    translate: this.giveNoteOnCast,
-                    unlimited: this.noteIsEndless,
-                    time: this.noteExpires,
-                    addressedTo: null,
-                })
-            );
-            response = await response.json();
+            let response = await this.request('/notes/add', 'POST', {
+                name: this.noteName,
+                comment: this.noteDescription,
+                translate: this.giveNoteOnCast,
+                unlimited: this.noteIsEndless,
+                time: this.noteExpires,
+                addressedTo: null,
+            });
+
             this.clearFlags();
-
-            if (response.status === 'success') {
-                this.toast('success', 'Уведомление успешно добавлено.');
-                this.notes = [response.data].concat(this.notes);
-
-                // this.socket().emit('new_note', { ads: response.data });
-            } else {
+            if (response.status !== 'success') {
                 this.toast('error', response.data);
+                return;
             }
+            this.toast('success', 'Уведомление успешно добавлено.');
+            this.notes = [response.data].concat(this.notes);
+            // this.socket().emit('new_note', { ads: response.data });
         },
+
         async delNote(id, index) {
-            let response = await fetch('/notes/delete', this.options('DELETE', { id }));
-            response = await response.json();
-
-            if (response.status === 'success') {
-                this.notes.splice(index, 1);
-                this.toast('success', 'Объявление было успешно удалено.');
-
-                // this.socket().emit('del_note', { id: id });
-            } else {
+            let response = await this.request('/notes/delete', 'DELETE', { id });
+            if (response.status !== 'success') {
                 this.toast('error', 'Что-то пошло не так :(');
+                return;
             }
+            this.notes.splice(index, 1);
+            this.toast('success', 'Объявление было успешно удалено.');
+            // this.socket().emit('del_note', { id: id });
         },
     },
     async mounted() {

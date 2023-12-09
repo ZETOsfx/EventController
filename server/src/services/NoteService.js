@@ -110,11 +110,11 @@ class NoteService {
         const { name, comment, translate, unlimited, addressedTo } = params?.body;
         let { time } = params?.body;
 
-        if (name === '' || comment === '') {
+        if (!name || !comment) {
             throw new Error('Поля "Заголовок" и "Содержимое" должны быть заполнены');
         }
 
-        if (translate === undefined || unlimited === undefined || time === undefined) {
+        if (translate == null || unlimited == null || time == null) {
             throw new Error('Нарушена целостность запроса.');
         }
 

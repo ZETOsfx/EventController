@@ -1,6 +1,6 @@
 <script>
 export default {
-    inject: ['session', 'socket', 'options', 'toast', 'clickBlock'],
+    inject: ['session', 'socket', 'toast', 'clickBlock', 'request'],
     data() {
         return {
             process_started: false,
@@ -36,22 +36,8 @@ export default {
             this.saveProfileModal = new bootstrap.Modal(document.getElementById('ModalSaveProfile'));
             this.deleteUserModal = new bootstrap.Modal(document.getElementById('ModalDeleteProfile'));
 
-            let response = await fetch('/accounts', {
-                method: 'GET',
-                headers: new Headers({
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                    'x-access-token': JSON.parse(localStorage.getItem('user')).token,
-                }),
-            });
-            response = await response.json();
-
-            if (response.status === 'success') {
-                this.users = response.data;
-            } else {
-                this.toast('error', 'Что-то пошло не так :(');
-            }
+            let response = await this.request('/accounts', 'GET');
+            response.status === 'success' ? (this.users = response.data) : this.toast('error', 'Что-то пошло не так :(');
 
             for (let i in this.users) {
                 this.users[i].lock = true;
@@ -89,39 +75,34 @@ export default {
         async addUser() {
             if (this.addForm.name.length > 16) {
                 this.toast('error', 'Длина отображаемого имени превышает ограничение: 16 символов.');
+                return;
             } else if (this.addForm.login.length > 20) {
                 this.toast('error', 'Длина логина превышает ограничение: 20 символов.');
-            } else {
-                if (this.addForm.password !== this.addForm.checkpass) {
-                    this.toast('error', 'Введенные пароли не совпадают.');
-                    return;
-                }
-
-                let response = await fetch(
-                    '/accounts/add',
-                    this.options('POST', {
-                        name: this.addForm.name,
-                        login: this.addForm.login,
-                        password: this.addForm.password,
-                        role: this.addForm.role,
-                    })
-                );
-
-                response = await response.json();
-
-                if (response.status === 'success') {
-                    this.toast('success', 'Пользователь был успешно добавлен.');
-
-                    let usr = response.data;
-                    usr.lock = true;
-                    usr.checkpass = '';
-                    this.users.push(usr);
-
-                    this.addForm = { name: '', login: '', role: '', password: '', checkpass: '' };
-                } else {
-                    this.toast('error', response.data);
-                }
+                return;
+            } else if (this.addForm.password !== this.addForm.checkpass) {
+                this.toast('error', 'Введенные пароли не совпадают.');
+                return;
             }
+
+            let response = await this.request('/accounts/add', 'POST', {
+                name: this.addForm.name,
+                login: this.addForm.login,
+                password: this.addForm.password,
+                role: this.addForm.role,
+            });
+
+            if (response.status !== 'success') {
+                this.toast('error', response.data);
+                return;
+            }
+
+            let usr = response.data;
+            usr.lock = true;
+            usr.checkpass = '';
+            this.users.push(usr);
+
+            this.addForm = { name: '', login: '', role: '', password: '', checkpass: '' };
+            this.toast('success', 'Пользователь был успешно добавлен.');
         },
 
         /**
@@ -148,41 +129,38 @@ export default {
 
             if (this.users[index].name.length > 16) {
                 this.toast('error', 'Длина отображаемого имени превышает ограничение: 16 символов.');
+                return;
             } else if (this.users[index].login.length > 20) {
                 this.toast('error', 'Длина логина превышает ограничение: 20 символов.');
-            } else {
-                if (this.isChanged) {
-                    if (this.users[index].password.length > 0 && this.users[index].checkpass !== this.users[index].password) {
-                        this.toast('error', 'Введенные пароли не совпадают.');
-                        return;
-                    }
-
-                    let response = await fetch(
-                        '/accounts/update',
-                        this.options('POST', {
-                            id: this.users[index].id,
-                            name: this.users[index].name,
-                            login: this.users[index].login,
-                            role: this.users[index].role,
-                            password: this.users[index].password,
-                        })
-                    );
-                    response = await response.json();
-
-                    if (response.status !== 'success') {
-                        this.toast('error', response.data);
-                        return;
-                    }
-
-                    this.users[index].password = '';
-                    this.isChanged = false;
-                    this.saveProfileModal.hide();
-                    this.toast('success', 'Изменения внесены успешно.');
-                }
-
-                this.process_started = false;
-                this.users[index].lock = true;
+                return;
+            } else if (this.users[index].password.length > 0 && this.users[index].checkpass !== this.users[index].password) {
+                this.toast('error', 'Введенные пароли не совпадают.');
+                return;
             }
+
+            this.process_started = false;
+            this.users[index].lock = true;
+
+            if (!this.isChanged) {
+                return;
+            }
+
+            let response = await this.request('/accounts/update', 'POST', {
+                id: this.users[index].id,
+                name: this.users[index].name,
+                login: this.users[index].login,
+                role: this.users[index].role,
+                password: this.users[index].password,
+            });
+
+            if (response.status !== 'success') {
+                this.toast('error', response.data);
+                return;
+            }
+            this.users[index].password = '';
+            this.isChanged = false;
+            this.saveProfileModal.hide();
+            this.toast('success', 'Изменения внесены успешно.');
         },
 
         /**
@@ -193,20 +171,14 @@ export default {
         async deleteUser(modalData) {
             let index = modalData.index;
 
-            let response = await fetch(
-                '/accounts/delete',
-                this.options('DELETE', {
-                    id: this.users[index].id,
-                })
-            );
-
-            response = await response.json();
+            let response = await this.request('/accounts/delete', 'DELETE', {
+                id: this.users[index].id,
+            });
 
             if (response.status !== 'success') {
                 this.toast('error', response.data);
                 return;
             }
-
             this.users.splice(index, 1);
             this.deleteUserModal.hide();
             this.toast('success', 'Профиль был успешно удален.');

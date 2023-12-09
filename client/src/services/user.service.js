@@ -16,7 +16,10 @@ export const userService = {
 function login(username, password) {
     const requestOptions = {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            'x-access-token': 'undefined',
+        },
         body: JSON.stringify({ login: username, password }),
     };
 

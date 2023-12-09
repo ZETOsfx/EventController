@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 export default {
-    inject: ['session', 'socket', 'toast', 'options'],
+    inject: ['session', 'socket', 'toast', 'request'],
     data() {
         return {
             minScreenSizeError: false,
@@ -41,16 +41,7 @@ export default {
         },
 
         async getFiles() {
-            let responseFiles = await fetch('/files/img', {
-                method: 'GET',
-                headers: new Headers({
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                    'x-access-token': JSON.parse(localStorage.getItem('user')).token,
-                }),
-            });
-            responseFiles = await responseFiles.json();
+            let responseFiles = await this.request('/files/img', 'GET');
 
             if (responseFiles.status === 'success') {
                 this.files = responseFiles.data;
@@ -59,38 +50,20 @@ export default {
                 this.toast('error', responseFiles.data);
             }
 
-            let response = await fetch('/accounts', {
-                method: 'GET',
-                headers: new Headers({
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                    'x-access-token': JSON.parse(localStorage.getItem('user')).token,
-                }),
-            });
-            response = await response.json();
+            let response = await this.request('/accounts', 'GET');
             this.users = response.data;
 
-            let responseStorage = await fetch('/storage', {
-                method: 'GET',
-                headers: new Headers({
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                    'x-access-token': JSON.parse(localStorage.getItem('user')).token,
-                }),
-            });
-            responseStorage = await responseStorage.json();
+            let responseStorage = await this.request('/storage', 'GET');
 
-            if (responseStorage.status === 'success') {
-                this.storagePercent = responseStorage.data[2];
-                this.storageUsed = responseStorage.data[1];
-                this.storageSize = responseStorage.data[0];
-
-                document.getElementById('progressBarStorage').setAttribute('style', 'width: ' + this.storagePercent);
-            } else {
+            if (responseStorage.status !== 'success') {
                 this.toast('error', responseFiles.data);
+                return;
             }
+            this.storagePercent = responseStorage.data[2];
+            this.storageUsed = responseStorage.data[1];
+            this.storageSize = responseStorage.data[0];
+
+            document.getElementById('progressBarStorage').setAttribute('style', 'width: ' + this.storagePercent);
         },
 
         updateBar() {
@@ -180,70 +153,68 @@ export default {
         async deleteItem(index) {
             const id = this.files[index].id;
 
-            let response = await fetch('/files/img/delete', this.options('DELETE', { id }));
-            response = await response.json();
-
-            if (response.status === 'success') {
-                this.files.splice(index, 1);
-                const removeIndex = this.filesReserve.findIndex(obj => obj.id === id);
-                this.filesReserve.splice(removeIndex, 1);
-                this.toast('success', 'Файл успешно удален из хранилища.');
-            } else {
+            let response = await this.request('/files/img/delete', 'DELETE', { id });
+            if (response.status !== 'success') {
                 this.toast('error', 'Что-то пошло не так :(');
+                return;
             }
+            const removeIndex = this.filesReserve.findIndex(obj => obj.id === id);
+            this.filesReserve.splice(removeIndex, 1);
+            this.search(this.filter, this.sortBy);
+            this.toast('success', 'Файл успешно удален из хранилища.');
         },
 
-        triggerModal(ops, indexorfile, src) {
+        triggerModal(ops, indexOrFile, src) {
             switch (ops) {
                 case 'read':
                     if (src === 'files') {
-                        this.forModal.index = indexorfile;
-                        this.forModal.name = this.files[indexorfile].name;
-                        this.forModal.actual = this.files[indexorfile].expires;
-                        this.forModal.author = this.files[indexorfile].author.name;
-                        this.forModal.src = this.files[indexorfile].src;
-                        this.forModal.format = this.files[indexorfile].format;
-                        this.forModal.weight = this.files[indexorfile].weight;
-                        this.forModal.type = this.files[indexorfile].type;
-                        this.forModal.unlim = this.files[indexorfile].isUnlimited;
+                        this.forModal.index = indexOrFile;
+                        this.forModal.name = this.files[indexOrFile].name;
+                        this.forModal.actual = this.files[indexOrFile].expires;
+                        this.forModal.author = this.files[indexOrFile].author.name;
+                        this.forModal.src = this.files[indexOrFile].src;
+                        this.forModal.format = this.files[indexOrFile].format;
+                        this.forModal.weight = this.files[indexOrFile].weight;
+                        this.forModal.type = this.files[indexOrFile].type;
+                        this.forModal.unlim = this.files[indexOrFile].isUnlimited;
                     } else {
-                        this.forModal.index = indexorfile;
-                        this.forModal.name = this.sendFiles[indexorfile].fileName.split('.')[0];
+                        this.forModal.index = indexOrFile;
+                        this.forModal.name = this.sendFiles[indexOrFile].fileName.split('.')[0];
                         this.forModal.unlim = true;
-                        this.forModal.author = this.sendFiles[indexorfile].author.name;
-                        this.forModal.src = this.sendFiles[indexorfile].dataUrl;
-                        this.forModal.format = this.sendFiles[indexorfile].fileExtension;
+                        this.forModal.author = this.sendFiles[indexOrFile].author.name;
+                        this.forModal.src = this.sendFiles[indexOrFile].dataUrl;
+                        this.forModal.format = this.sendFiles[indexOrFile].fileExtension;
                         this.forModal.weight = 'weight';
-                        this.forModal.type = this.sendFiles[indexorfile].fileMimeType.split('/')[0];
+                        this.forModal.type = this.sendFiles[indexOrFile].fileMimeType.split('/')[0];
                     }
                     // fetch '/open'
                     // - success - open view-modal
                     // - error - error message
                     break;
                 case 'add':
-                    this.forModal.file = indexorfile;
+                    this.forModal.file = indexOrFile;
                     // addModal
                     break;
                 case 'delete':
                     if (src === 'files') {
-                        this.forModal.index = indexorfile;
-                        this.forModal.name = this.files[indexorfile].name;
-                        this.forModal.actual = this.files[indexorfile].expires;
-                        this.forModal.author = this.files[indexorfile].author.name;
-                        this.forModal.src = this.files[indexorfile].src;
-                        this.forModal.format = this.files[indexorfile].format;
-                        this.forModal.weight = this.files[indexorfile].weight;
-                        this.forModal.type = this.files[indexorfile].type;
-                        this.forModal.unlim = this.files[indexorfile].isUnlimited;
+                        this.forModal.index = indexOrFile;
+                        this.forModal.name = this.files[indexOrFile].name;
+                        this.forModal.actual = this.files[indexOrFile].expires;
+                        this.forModal.author = this.files[indexOrFile].author.name;
+                        this.forModal.src = this.files[indexOrFile].src;
+                        this.forModal.format = this.files[indexOrFile].format;
+                        this.forModal.weight = this.files[indexOrFile].weight;
+                        this.forModal.type = this.files[indexOrFile].type;
+                        this.forModal.unlim = this.files[indexOrFile].isUnlimited;
                     } else {
-                        this.forModal.index = indexorfile;
-                        this.forModal.name = this.sendFiles[indexorfile].fileName.split('.')[0];
+                        this.forModal.index = indexOrFile;
+                        this.forModal.name = this.sendFiles[indexOrFile].fileName.split('.')[0];
                         this.forModal.unlim = true;
-                        this.forModal.author = this.sendFiles[indexorfile].author.name;
-                        this.forModal.src = this.sendFiles[indexorfile].dataUrl;
-                        this.forModal.format = this.sendFiles[indexorfile].fileExtension;
+                        this.forModal.author = this.sendFiles[indexOrFile].author.name;
+                        this.forModal.src = this.sendFiles[indexOrFile].dataUrl;
+                        this.forModal.format = this.sendFiles[indexOrFile].fileExtension;
                         this.forModal.weight = 'weight';
-                        this.forModal.type = this.sendFiles[indexorfile].fileMimeType.split('/')[0];
+                        this.forModal.type = this.sendFiles[indexOrFile].fileMimeType.split('/')[0];
                     }
                     break;
             }

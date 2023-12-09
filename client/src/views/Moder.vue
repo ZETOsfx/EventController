@@ -2,22 +2,23 @@
 import detailModals from '../components/detailModals.vue';
 
 export default {
-    inject: ['session', 'socket', 'options', 'toast', 'clickBlock'],
+    inject: ['session', 'socket', 'toast', 'clickBlock', 'request'],
     components: {
         detailModals,
     },
-    data()
-    {
+    data() {
         return {
-            prevArrow: '', nextArrow: '', currentModalPage: 0,
+            prevArrow: '',
+            nextArrow: '',
+            currentModalPage: 0,
 
             composeDetailsModal: {
-                templateName: '',           // Name of tmp watch this time
-                authorName: '',             // Author of watching tmp
-                previewEvents: [],          // Events of current template
-                numberOfEvents: 0,          // Number of events into current template
-                nameOfCurrentEvent: '',     // Name of opened template
-                numberOfCurrentEvent: 0     // Number of event from opened template
+                templateName: '', // Name of tmp watch this time
+                authorName: '', // Author of watching tmp
+                previewEvents: [], // Events of current template
+                numberOfEvents: 0, // Number of events into current template
+                nameOfCurrentEvent: '', // Name of opened template
+                numberOfCurrentEvent: 0, // Number of event from opened template
             },
 
             allRequests: [],
@@ -28,9 +29,12 @@ export default {
 
             userProcess: '',
             eventList: [],
-            addForm: { name: "", src: "", type: 'image', time: 15, isActive: true },
+            addForm: { name: '', src: '', type: 'image', time: 15, isActive: true },
 
-            editFormS: [], editFormB: [], editFormL: [], customForms: [],
+            editFormS: [],
+            editFormB: [],
+            editFormL: [],
+            customForms: [],
             forModal: {
                 hasActiveOnMonitor: false,
                 actionData: 'Возвращаю',
@@ -50,19 +54,17 @@ export default {
             actModal: '',
             activeClearModal: '',
 
-            format: /[`!@#$%^&*()+=\[\]{};':"\\|,.<>\/?~]/
-        }
+            format: /[`!@#$%^&*()+=\[\]{};':"\\|,.<>\/?~]/,
+        };
     },
     methods: {
         /**
          * Подключение к слушателю событий
          */
-        connect()
-        {
-            this.socket().on('process:start', (data) =>
-            {
+        connect() {
+            this.socket().on('process:start', data => {
                 switch (data.list) {
-                    case "req":
+                    case 'req':
                         for (let i in this.waitingRequests) {
                             if (this.waitingRequests[i].name === data.process) {
                                 this.waitingRequests[i].isStartedProcess = true;
@@ -71,7 +73,7 @@ export default {
                             }
                         }
                         break;
-                    case "act":
+                    case 'act':
                         for (let i in this.activeRequests) {
                             if (this.activeRequests[i].name === data.process) {
                                 this.activeRequests[i].isStartedProcess = true;
@@ -80,7 +82,7 @@ export default {
                             }
                         }
                         break;
-                    case "acc":
+                    case 'acc':
                         for (let i in this.approvedRequests) {
                             if (this.approvedRequests[i].name === data.process) {
                                 this.approvedRequests[i].isStartedProcess = true;
@@ -94,8 +96,7 @@ export default {
                 }
             });
 
-            this.socket().on('process:end', async (data) =>
-            {
+            this.socket().on('process:end', async data => {
                 if (!data.name) {
                     this.toast('error', 'Ошибка идентификации обрабатывающего пользователя.');
                     return;
@@ -120,66 +121,56 @@ export default {
                 }
             });
 
-            this.socket().on('process:confirm', async (data) =>
-            {
-                let response = await fetch(`/control`, {
-                    method: 'GET',
-                    headers: new Headers({
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'Access-Control-Allow-Origin': '*',
-                        'x-access-token': JSON.parse(localStorage.getItem('user')).token,
-                    })
-                });
-                response = await response.json();
+            this.socket().on('process:confirm', async data => {
+                let response = await this.request('/control', 'GET');
 
-                if (response.status === 'success') {
-                    this.allRequests = response.data;
-                    if (data.list === 'req') {
-                        for (let i in this.allRequests) {
-                            if (this.allRequests[i].name === data.process) {
-                                this.approvedRequests.push(this.allRequests[i]);
-                            }
+                if (response.status !== 'success') {
+                    this.toast('error', 'Пожалуйста, перезагрузите страницу');
+                    return;
+                }
+
+                this.allRequests = response.data;
+                if (data.list === 'req') {
+                    for (let i in this.allRequests) {
+                        if (this.allRequests[i].name === data.process) {
+                            this.approvedRequests.push(this.allRequests[i]);
                         }
-                        for (let i in this.waitingRequests) {
-                            if (this.waitingRequests[i].name === data.process) {
-                                this.waitingRequests.splice(Number(i), 1);
-                            }
+                    }
+                    for (let i in this.waitingRequests) {
+                        if (this.waitingRequests[i].name === data.process) {
+                            this.waitingRequests.splice(Number(i), 1);
                         }
-                    } else if (data.list === 'acc') {
-                        let tmp;
-                        for (let i in this.allRequests) {
-                            if (this.allRequests[i].name === data.process) {
-                                tmp = this.allRequests[i];
-                            }
+                    }
+                } else if (data.list === 'acc') {
+                    let tmp;
+                    for (let i in this.allRequests) {
+                        if (this.allRequests[i].name === data.process) {
+                            tmp = this.allRequests[i];
                         }
-                        for (let i in this.approvedRequests) {
-                            if (this.approvedRequests[i].name === data.process) {
-                                this.approvedRequests[i] = tmp;
-                            }
+                    }
+                    for (let i in this.approvedRequests) {
+                        if (this.approvedRequests[i].name === data.process) {
+                            this.approvedRequests[i] = tmp;
                         }
-                    } else if (data.list === 'act') {
-                        let tmp;
-                        for (let i in this.allRequests) {
-                            if (this.allRequests[i].name === data.process) {
-                                tmp = this.allRequests[i];
-                            }
+                    }
+                } else if (data.list === 'act') {
+                    let tmp;
+                    for (let i in this.allRequests) {
+                        if (this.allRequests[i].name === data.process) {
+                            tmp = this.allRequests[i];
                         }
-                        for (let i in this.activeRequests) {
-                            if (this.activeRequests[i].name === data.process) {
-                                this.activeRequests[i] = tmp;
-                            }
+                    }
+                    for (let i in this.activeRequests) {
+                        if (this.activeRequests[i].name === data.process) {
+                            this.activeRequests[i] = tmp;
                         }
-                    } else {
-                        this.toast('error', 'Ошибка идентификации локации обновленных данных.');
                     }
                 } else {
-                    this.toast('error', 'Пожалуйста, перезагрузите страницу');
+                    this.toast('error', 'Ошибка идентификации локации обновленных данных.');
                 }
             });
 
-            this.socket().on('process:deny', (data) =>
-            {
+            this.socket().on('process:deny', data => {
                 if (data.list === 'req') {
                     for (let i in this.waitingRequests) {
                         if (this.waitingRequests[i].name === data.process) {
@@ -193,39 +184,28 @@ export default {
                         }
                     }
                 } else {
-                    this.toast('success', 'Не удалось определить действие.')
+                    this.toast('success', 'Не удалось определить действие.');
                 }
             });
 
-            this.socket().on('request:new', async (data) =>
-            {
-                let response = await fetch(`/control`, {
-                    method: 'GET',
-                    headers: new Headers({
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'Access-Control-Allow-Origin': '*',
-                        'x-access-token': JSON.parse(localStorage.getItem('user')).token,
-                    }),
-                });
-                response = await response.json();
+            this.socket().on('request:new', async data => {
+                let response = await this.request('/control', 'GET');
 
-                if (response.status === 'success') {
-                    this.allRequests = response.data;
-
-                    for (let i in this.allRequests) {
-                        if (this.allRequests[i].name === data.request) {
-                            this.waitingRequests.push(this.allRequests[i]);
-                        }
-                    }
-                    this.toast('info', 'Редактор: ' + data.name + ' только что прислал запрос на модерацию: "' + data.request + '".');
-                } else {
+                if (response.status !== 'success') {
                     this.toast('error', 'Пожалуйста, перезагрузите страницу');
+                    return;
                 }
+                this.allRequests = response.data;
+
+                for (let i in this.allRequests) {
+                    if (this.allRequests[i].name === data.request) {
+                        this.waitingRequests.push(this.allRequests[i]);
+                    }
+                }
+                this.toast('info', 'Редактор: ' + data.name + ' только что прислал запрос на модерацию: "' + data.request + '".');
             });
 
-            this.socket().on('active:upd', async (data) =>
-            {
+            this.socket().on('active:upd', async data => {
                 for (let i in this.approvedRequests) {
                     if (this.approvedRequests[i].name === data.name) {
                         this.activeRequests = [];
@@ -242,73 +222,81 @@ export default {
          * @param active
          * @returns {boolean}
          */
-        ProgressBar(active)
-        {
+        ProgressBar(active) {
             let Lessons = [
-                [30000, 31200, 'Перерыв'],                                    // Перерыв, с 8:20
-                [31200, 36900, '1-ая пара'],                                  // 1ая пара, с 8:40
-                [36900, 37500, 'Перерыв'],                                    // Перерыв, с 10:15
-                [37500, 43200, '2-ая пара'],                                  // 2ая пара, с 10:25
-                [43200, 46200, 'Обед'],                                       // Обед, С 12:00
-                [46200, 51900, '3-ая пара'],                                  // 3ая пара, с 12:50
-                [51900, 52500, 'Перерыв'],                                    // Перерыв, с 14:25
-                [52500, 58200, '4-ая пара'],                                  // 4ая пара, с 14:35
-                [58200, 58800, 'Перерыв'],                                    // Перерыв, с 16:10
-                [58800, 64500, '5-ая пара'],                                  // 5ая пара, с 16:20
+                [30000, 31200, 'Перерыв'], // Перерыв, с 8:20
+                [31200, 36900, '1-ая пара'], // 1ая пара, с 8:40
+                [36900, 37500, 'Перерыв'], // Перерыв, с 10:15
+                [37500, 43200, '2-ая пара'], // 2ая пара, с 10:25
+                [43200, 46200, 'Обед'], // Обед, С 12:00
+                [46200, 51900, '3-ая пара'], // 3ая пара, с 12:50
+                [51900, 52500, 'Перерыв'], // Перерыв, с 14:25
+                [52500, 58200, '4-ая пара'], // 4ая пара, с 14:35
+                [58200, 58800, 'Перерыв'], // Перерыв, с 16:10
+                [58800, 64500, '5-ая пара'], // 5ая пара, с 16:20
             ];
-            let Special = [                                                 // Особое расписание
-                [28800, 64800, 'Особое расписание'],                          // с 8:00 до 18:00
+            let Special = [
+                // Особое расписание
+                [28800, 64800, 'Особое расписание'], // с 8:00 до 18:00
             ];
 
-            function getPercent(curSec, bSpecial)
-            {
+            function getPercent(curSec, bSpecial) {
                 let percent;
-                if (!bSpecial) {                                              // Если БУДНИ
-                    for (let i in Lessons) {                                    // Бежим по заданным промежуткам
-                        if (curSec >= Lessons[i][0] && curSec < Lessons[i][1]) {  // Проверяем, в каком промежутке находимся
-                            let during = Lessons[i][1] - Lessons[i][0];             // Высчитываем продолжительность промежутка (1)
-                            let fromStart = Lessons[i][1] - curSec;                 // Сколько прошло с начала в промежутке (2)
-                            percent = 100 - (fromStart * 100) / during;             // Делим (2) на (1) и узнаём проценты
-                            return percent;                                         // Возвращаем посчитанный %
+                if (!bSpecial) {
+                    // Если БУДНИ
+                    for (let i in Lessons) {
+                        // Бежим по заданным промежуткам
+                        if (curSec >= Lessons[i][0] && curSec < Lessons[i][1]) {
+                            // Проверяем, в каком промежутке находимся
+                            let during = Lessons[i][1] - Lessons[i][0]; // Высчитываем продолжительность промежутка (1)
+                            let fromStart = Lessons[i][1] - curSec; // Сколько прошло с начала в промежутке (2)
+                            percent = 100 - (fromStart * 100) / during; // Делим (2) на (1) и узнаём проценты
+                            return percent; // Возвращаем посчитанный %
                         }
                     }
-                } else {                                                      // Если СПЕЦИАЛЬНОЕ РАСПИСАНИЕ
-                    if (curSec >= Special[0][0] && curSec < Special[0][1]) {    // Проверяем, в каком промежутке находимся
-                        let during = Special[0][1] - Special[0][0];               // Высчитываем продолжительность промежутка (1)
-                        let fromStart = Special[0][1] - curSec;                   // Сколько прошло с начала в промежутке (2)
-                        percent = 100 - (fromStart * 100) / during;               // Делим (2) на (1) и узнаём проценты
-                        return percent;                                           // Возвращаем посчитанный %
+                } else {
+                    // Если СПЕЦИАЛЬНОЕ РАСПИСАНИЕ
+                    if (curSec >= Special[0][0] && curSec < Special[0][1]) {
+                        // Проверяем, в каком промежутке находимся
+                        let during = Special[0][1] - Special[0][0]; // Высчитываем продолжительность промежутка (1)
+                        let fromStart = Special[0][1] - curSec; // Сколько прошло с начала в промежутке (2)
+                        percent = 100 - (fromStart * 100) / during; // Делим (2) на (1) и узнаём проценты
+                        return percent; // Возвращаем посчитанный %
                     }
-                }                                                             // После 17:55 и до 8:20 - Свободное время,
-                return 100;                                                   // играет шаблон "Обед"
+                } // После 17:55 и до 8:20 - Свободное время,
+                return 100; // играет шаблон "Обед"
             }
 
-            function getName(curSec, bSpecial)
-            {                            // Узнать имя в зависимости от расписания
-                if (!bSpecial) {                                              // Если БУДНИ
-                    for (let i in Lessons) {                                    // Проверяем, в каком промежутке находимся
-                        if (curSec >= Lessons[i][0] && curSec < Lessons[i][1]) {  // Если попадаем в один из заданных промежутков
-                            return Lessons[i][2];                                   // Возвращаем наименование промежутка
+            function getName(curSec, bSpecial) {
+                // Узнать имя в зависимости от расписания
+                if (!bSpecial) {
+                    // Если БУДНИ
+                    for (let i in Lessons) {
+                        // Проверяем, в каком промежутке находимся
+                        if (curSec >= Lessons[i][0] && curSec < Lessons[i][1]) {
+                            // Если попадаем в один из заданных промежутков
+                            return Lessons[i][2]; // Возвращаем наименование промежутка
                         }
                     }
-                    return 'Свободное время';                                   // Иначе возвращаем "Свободное время"
-                } else return 'Особое расписание';                            // Если СПЕЦИАЛЬНОЕ РАСПИСАНИЕ
-            }                                                               // возвращаем "Особое расписание"
+                    return 'Свободное время'; // Иначе возвращаем "Свободное время"
+                } else return 'Особое расписание'; // Если СПЕЦИАЛЬНОЕ РАСПИСАНИЕ
+            } // возвращаем "Особое расписание"
 
-            function WhatTime()
-            {                                           // Узнать время в секундах с начала дня
-                let today = new Date();                 // Получить текущее время и вернуть значение в секнудах
+            function WhatTime() {
+                // Узнать время в секундах с начала дня
+                let today = new Date(); // Получить текущее время и вернуть значение в секнудах
                 return (today.getHours() * 60 + today.getMinutes()) * 60 + today.getSeconds();
             }
 
-            function checkTime(i)
-            {                                         // Преобразовать время к презентабельному виду
-                if (i < 10) { i = '0' + i; }          // Если < 10 то добавить перед цифрой "0" для красоты
+            function checkTime(i) {
+                // Преобразовать время к презентабельному виду
+                if (i < 10) {
+                    i = '0' + i;
+                } // Если < 10 то добавить перед цифрой "0" для красоты
                 return i;
             }
 
-            function startTime(active)
-            {
+            function startTime(active) {
                 let today = new Date();
                 let actualTime = checkTime(today.getHours()) + ':' + checkTime(today.getMinutes()) + ':' + checkTime(today.getSeconds());
 
@@ -324,27 +312,26 @@ export default {
                     }
                 }
 
-                setTimeout(async function () { startTime(active); }, 1000);
+                setTimeout(async function () {
+                    startTime(active);
+                }, 1000);
             }
 
             startTime(this.activeRequests);
 
-            async function refreshAt(hours, minutes, seconds, active)
-            {
+            async function refreshAt(hours, minutes, seconds, active) {
                 let now = new Date();
                 let then = new Date();
 
-                if (now.getHours() > hours ||
-                    (now.getHours() === hours && now.getMinutes() > minutes) ||
-                    (now.getHours() === hours && now.getMinutes() === minutes && now.getSeconds() >= seconds)
-                ) {
+                if (now.getHours() > hours || (now.getHours() === hours && now.getMinutes() > minutes) || (now.getHours() === hours && now.getMinutes() === minutes && now.getSeconds() >= seconds)) {
                     then.setDate(now.getDate() + 1);
                 }
-                then.setHours(hours); then.setMinutes(minutes); then.setSeconds(seconds);
+                then.setHours(hours);
+                then.setMinutes(minutes);
+                then.setSeconds(seconds);
                 // Установка тайм-аута до следующего вызова
                 let timeout = then.getTime() - now.getTime();
-                setTimeout(async function ()
-                {
+                setTimeout(async function () {
                     // Подстановка надписи в элемент при обновлении надписи
                     for (let i in active) {
                         if (!active[i].compose.isSpecial) {
@@ -353,17 +340,23 @@ export default {
                             document.getElementById('nameInfo_specdays').innerHTML = getName(WhatTime(), true);
                         }
                     }
-
                 }, timeout);
             }
             // Проверка времени для обновления надписи ПЕРЕДЕЛАТЬ
-            refreshAt(8, 20, 3, this.activeRequests); refreshAt(8, 40, 3, this.activeRequests); refreshAt(10, 15, 3, this.activeRequests); refreshAt(10, 25, 3, this.activeRequests);
-            refreshAt(12, 0, 3, this.activeRequests); refreshAt(12, 50, 3, this.activeRequests); refreshAt(14, 25, 3, this.activeRequests); refreshAt(14, 35, 3, this.activeRequests);
-            refreshAt(16, 10, 3, this.activeRequests); refreshAt(16, 20, 3, this.activeRequests); refreshAt(17, 55, 3, this.activeRequests);
+            refreshAt(8, 20, 3, this.activeRequests);
+            refreshAt(8, 40, 3, this.activeRequests);
+            refreshAt(10, 15, 3, this.activeRequests);
+            refreshAt(10, 25, 3, this.activeRequests);
+            refreshAt(12, 0, 3, this.activeRequests);
+            refreshAt(12, 50, 3, this.activeRequests);
+            refreshAt(14, 25, 3, this.activeRequests);
+            refreshAt(14, 35, 3, this.activeRequests);
+            refreshAt(16, 10, 3, this.activeRequests);
+            refreshAt(16, 20, 3, this.activeRequests);
+            refreshAt(17, 55, 3, this.activeRequests);
 
             // Подстановка надписи в элемент при загрузке страницы
-            setTimeout(async function ()
-            {
+            setTimeout(async function () {
                 for (let i in active) {
                     if (!active[i].compose.isSpecial) {
                         document.getElementById('nameInfo_workdays').innerHTML = getName(WhatTime(), false);
@@ -382,8 +375,7 @@ export default {
          *
          * @returns {Promise<void>}
          */
-        async getRequests(withModals = true)
-        {
+        async getRequests(withModals = true) {
             if (withModals) {
                 this.sendDetailWorkdays = new bootstrap.Modal(document.getElementById('detailsWorkdaysModal'));
                 this.sendDetailSpecial = new bootstrap.Modal(document.getElementById('detailsSpecialModal'));
@@ -396,23 +388,12 @@ export default {
                 this.activeClearModal = new bootstrap.Modal(document.getElementById('ActiveClearModal'));
             }
 
-            let response = await fetch(`/control`, {
-                method: 'GET',
-                headers: new Headers({
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                    'x-access-token': JSON.parse(localStorage.getItem('user')).token,
-                })
-            });
-            response = await response.json();
-
+            let response = await this.request('/control', 'GET');
             if (response.status !== 'success') {
                 this.toast('error', 'Ошибка получения списка запросов');
                 return;
             }
             this.allRequests = response.data;
-
             for (let i in this.allRequests) {
                 this.allRequests[i].compose.programsRes = JSON.parse(JSON.stringify(this.allRequests[i].compose.programs));
                 if (this.allRequests[i].isActive) {
@@ -425,7 +406,6 @@ export default {
                     this.waitingRequests.push(this.allRequests[i]);
                 }
             }
-
             for (let i in this.waitingRequests) {
                 if (this.waitingRequests[i].inProcessing) {
                     this.waitingRequests[i].isStartedProcess = true;
@@ -435,17 +415,7 @@ export default {
                 }
             }
 
-            let tmp = await fetch('/setting/all', {
-                method: 'GET',
-                headers: new Headers({
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                    'x-access-token': JSON.parse(localStorage.getItem('user')).token,
-                }),
-            });
-            tmp = await tmp.json();
-
+            let tmp = await this.request('/setting/all', 'GET');
             if (response.status !== 'success') {
                 this.toast('error', 'Что-то пошло не так :(');
                 return;
@@ -462,18 +432,16 @@ export default {
          * @param list
          * @returns {Promise<void>}
          */
-        async startProcessing(obj, list)
-        {
+        async startProcessing(obj, list) {
             if (this.userProcess !== '' && !obj.isStartedProcess) {
                 this.toast('error', 'Вы можете обрабатывать максимум одно событие! Сначала завершите текущую обработку.');
                 return;
             }
 
-            let toggle = await fetch('/control/toggle', this.options('POST', {
+            let toggle = await this.request('/control/toggle', 'POST', {
                 id: obj.id,
                 inProcessing: true,
-            }));
-            toggle = await toggle.json();
+            });
 
             if (toggle.status !== 'success') {
                 this.toast('error', 'Ошибка взятия в обработку');
@@ -490,11 +458,9 @@ export default {
             //     user: this.session().name,
             // });
 
-            document.querySelectorAll('[data-bs-toggle="popover"]')
-                .forEach(popover =>
-                {
-                    new bootstrap.Popover(popover)
-                });
+            document.querySelectorAll('[data-bs-toggle="popover"]').forEach(popover => {
+                new bootstrap.Popover(popover);
+            });
         },
 
         /**
@@ -503,13 +469,11 @@ export default {
          * @param list
          * @returns {Promise<void>}
          */
-        async endProcessing(obj, list)
-        {
-            let toggle = await fetch('/control/toggle', this.options('POST', {
+        async endProcessing(obj, list) {
+            let toggle = await this.request('/control/toggle', 'POST', {
                 id: obj.id,
                 inProcessing: false,
-            }));
-            toggle = await toggle.json();
+            });
 
             if (toggle.status !== 'success') {
                 this.toast('error', 'Ошибка отмены процесса обработки');
@@ -534,8 +498,7 @@ export default {
          * @param index
          * @returns {Promise<void>}
          */
-        async triggerModal(type, obj, index)
-        {
+        async triggerModal(type, obj, index) {
             this.userProcess = obj.id;
             this.forModal.id = obj.id;
             this.forModal.obj = obj;
@@ -574,8 +537,7 @@ export default {
          * Утвердить запрос
          * @returns {Promise<void>}
          */
-        async buttonApprove(req, events)
-        {
+        async buttonApprove(req, events) {
             if (this.userProcess === '') {
                 this.toast('error', 'Некорректный параметр. Начните обработку корректно.');
                 return;
@@ -583,7 +545,9 @@ export default {
 
             let operation;
             if (events[0] !== undefined) {
-                let tmpFilter = [], timeFilter = [], eventFilter = [];
+                let tmpFilter = [],
+                    timeFilter = [],
+                    eventFilter = [];
                 let programs = req.compose.programs;
 
                 for (let i in programs) {
@@ -598,31 +562,29 @@ export default {
                 }
 
                 operation = {
-                    'approved': this.forModal.comment,
-                    'changed': {
+                    approved: this.forModal.comment,
+                    changed: {
                         forDate: req.compose.date,
                         programs: req.compose.isSpecial ? tmpFilter : req.compose.programs,
                         eventList: req.compose.isSpecial ? eventFilter : events,
                         timingList: req.compose.isSpecial ? timeFilter : null,
-                    }
-                }
+                    },
+                };
             } else {
                 operation = {
-                    'approved': this.forModal.comment,
-                }
+                    approved: this.forModal.comment,
+                };
             }
 
-            let response = await fetch('/control/update', this.options('POST', {
+            let response = await this.request('/control/update', 'POST', {
                 id: this.userProcess,
                 operation: operation,
-            }));
-            response = await response.json();
+            });
 
             if (response.status !== 'success') {
                 this.toast('error', 'Уже существует утвержденное событие на этот день.');
                 return;
             }
-
             this.toast('success', 'Запрос был успешно утвержден.');
             this.confirmModal.hide();
 
@@ -644,21 +606,18 @@ export default {
          * Отклонить запрос
          * @returns {Promise<void>}
          */
-        async buttonReject(list)
-        {
+        async buttonReject(list) {
             if (this.userProcess === '') {
                 this.toast('error', 'Некорректный параметр. Начните обработку корректно');
                 return;
             }
 
-            let response = await fetch('/control/update', this.options('POST', {
+            let response = await this.request('/control/update', 'POST', {
                 id: this.userProcess,
                 operation: {
-                    'rejected': this.forModal.comment,
+                    rejected: this.forModal.comment,
                 },
-            }));
-            response = await response.json();
-
+            });
             if (response.status !== 'success') {
                 this.toast('error', 'Произошла ошибка');
                 return;
@@ -697,8 +656,7 @@ export default {
          * Сохранить изменения, внесенные в запрос
          * @returns {Promise<void>}
          */
-        async saveChangesButton(req, events)
-        {
+        async saveChangesButton(req, events) {
             if (this.userProcess === '') {
                 this.toast('error', 'Некорректный параметр. Начните обработку корректно.');
                 return;
@@ -709,7 +667,9 @@ export default {
                 return;
             }
 
-            let tmpFilter = [], timeFilter = [], eventFilter = [];
+            let tmpFilter = [],
+                timeFilter = [],
+                eventFilter = [];
             let programs = req.compose.programs;
 
             for (let i in programs) {
@@ -723,18 +683,17 @@ export default {
                 eventFilter.push(events[i].events);
             }
 
-            let response = await fetch('/control/update', this.options('POST', {
+            let response = await this.request('/control/update', 'POST', {
                 id: this.userProcess,
                 operation: {
-                    'changed': {
+                    changed: {
                         forDate: req.compose.date,
                         programs: req.compose.isSpecial ? tmpFilter : req.compose.programs,
                         eventList: req.compose.isSpecial ? eventFilter : events,
                         timingList: req.compose.isSpecial ? timeFilter : null,
-                    }
+                    },
                 },
-            }));
-            response = await response.json();
+            });
 
             if (response.status !== 'success') {
                 this.toast('error', 'Произошла ошибка');
@@ -765,8 +724,7 @@ export default {
          * Подробный просмотр композиций
          * @returns {Promise<void>}
          */
-        async openDetails(request)
-        {
+        async openDetails(request) {
             if (this.eventList.id === request.id) {
                 if (this.eventList.type === false) {
                     this.sendDetailWorkdays.show();
@@ -793,21 +751,21 @@ export default {
 
                 for (let i in request.compose.programs[0].events) {
                     if (!this.editFormS[i]) {
-                        this.editFormS[i] = {}
+                        this.editFormS[i] = {};
                     }
                     this.editFormS[i].isDisabled = true;
                     this.eventList.data.lesson.push(request.compose.programs[0].events[i]);
                 }
                 for (let i in request.compose.programs[1].events) {
                     if (!this.editFormB[i]) {
-                        this.editFormB[i] = {}
+                        this.editFormB[i] = {};
                     }
                     this.editFormB[i].isDisabled = true;
                     this.eventList.data.breaktime.push(request.compose.programs[1].events[i]);
                 }
                 for (let i in request.compose.programs[2].events) {
                     if (!this.editFormL[i]) {
-                        this.editFormL[i] = {}
+                        this.editFormL[i] = {};
                     }
                     this.editFormL[i].isDisabled = true;
                     this.eventList.data.lunch.push(request.compose.programs[2].events[i]);
@@ -834,21 +792,19 @@ export default {
         /**
          * Установка утвержденного запроса активным
          */
-        async setActive()
-        {
+        async setActive() {
             if (!this.forModal.obj.isAccepted || !this.forModal.activeAction) {
                 this.toast('error', 'Невозможно установить не утвержденный запрос.');
                 return;
             }
 
-            let response = await fetch('/control/active', this.options('POST', {
+            let response = await this.request('/control/active', 'POST', {
                 id: this.forModal.id,
                 action: {
                     type: this.forModal.activeAction,
                     with: this.forModal.actionData,
                 },
-            }));
-            response = await response.json();
+            });
 
             if (response.status !== 'success') {
                 this.toast('error', response.data);
@@ -878,56 +834,51 @@ export default {
          * Добавить дополнительное поле в композицию спец. типа
          * @param list
          */
-        addField(list)
-        {
+        addField(list) {
             list.push({
                 id: 0,
                 name: '- Выберите -',
-                time_to_swap: '00:00'
+                time_to_swap: '00:00',
             });
         },
 
-        async addEvent(form, data)
-        {
-            if (!(this.addForm.name !== "" && (this.addForm.src !== ""))) {
+        async addEvent(form, data) {
+            if (!(this.addForm.name !== '' && this.addForm.src !== '')) {
                 this.toast('error', 'Пожалуйста, заполните все поля перед добавлением.');
                 return;
             }
 
             if (this.addForm.name.length > 50) {
-                this.toast('error', 'Полученно слишком длинное наименование события. \nПроверьте, пожалуйста, правильность введённых данных. \nРазрешено символов: 50. Получено: ' + this.addForm.name.length);
+                this.toast('error', 'Получено слишком длинное наименование события. \nПроверьте, пожалуйста, правильность введённых данных. \nРазрешено символов: 50. Получено: ' + this.addForm.name.length);
             } else if (!Number.isFinite(this.addForm.time) || this.addForm.time < 0) {
-                this.toast('error', 'Полчено некорректное значение времени при добавлении события. \n Проверьте, пожалуйста, правильность введённых данных.');
+                this.toast('error', 'Получено некорректное значение времени при добавлении события. \n Проверьте, пожалуйста, правильность введённых данных.');
             } else if (this.format.test(this.addForm.name)) {
                 this.toast('error', 'Имя события не должно содержать специальных символов: \n' + this.format);
             } else {
                 form.push({ isDisabled: true });
                 data.push(this.addForm);
-                this.addForm = { name: "", src: "", type: 'image', time: 15, isActive: true }
+                this.addForm = { name: '', src: '', type: 'image', time: 15, isActive: true };
             }
         },
 
-        async delEvent(index, form, data)
-        {
+        async delEvent(index, form, data) {
             form[index].isDisabled = true;
             form.splice(index, 1);
             data.splice(index, 1);
         },
 
-        async editEvent(index, form)
-        {
+        async editEvent(index, form) {
             form[index].isDisabled = false;
         },
 
-        async moveEvent(move, index, data)
-        {
+        async moveEvent(move, index, data) {
             let id1 = index;
             let id2 = null;
 
-            if (move === "down" && id1 !== data.length - 1) {
+            if (move === 'down' && id1 !== data.length - 1) {
                 id2 = id1++;
             }
-            if (move === "up" && id1 !== 0) {
+            if (move === 'up' && id1 !== 0) {
                 id2 = id1--;
             }
             if (id2 !== null) {
@@ -935,30 +886,21 @@ export default {
             }
         },
 
-        correctArr(_arr, _param)
-        {
+        correctArr(_arr, _param) {
             /*
              коррекция  элементов массива по паре индекса
              *    _arr -- массив требующий коррекции
              *   _param -- пара [n1,n2] -- индексы массива для взаимной  перестановки
              */
-            _arr[_param[1]] = _arr.splice(_param[0], 1, _arr[_param[1]])[0]
+            _arr[_param[1]] = _arr.splice(_param[0], 1, _arr[_param[1]])[0];
         },
 
         /**
          * Завершить все обработки пользователя
          * @returns {Promise<void>}
          */
-        async endAllProcesses()
-        {
-            let response = await fetch('/control/refund', {
-                method: 'POST',
-                headers: {
-                    'Content-type': 'application/json; charset=UTF-8',
-                    'x-access-token': JSON.parse(localStorage.getItem('user')).token,
-                },
-            });
-            response = await response.json();
+        async endAllProcesses() {
+            let response = await this.request('/control/refund', 'POST', {});
 
             if (response.status !== 'success') {
                 this.toast('error', 'Произошла ошибка. Перезагрузите страницу');
@@ -982,8 +924,7 @@ export default {
          * @param tmp Программа внутри композиции запроса
          * @returns {Promise<void>}
          */
-        async openPreview(req, tmp)
-        {
+        async openPreview(req, tmp) {
             this.composeDetailsModal.templateName = tmp.name;
             this.composeDetailsModal.authorName = req.compose.author.name;
             this.composeDetailsModal.previewEvents = tmp.events;
@@ -993,9 +934,8 @@ export default {
             this.fullscreenModal.show();
         },
 
-        /** Сокрытие надписей кнопок предпросмотра для малых экранов */
-        resizeTextEdit()
-        {
+        /** Сокрытие надписей кнопок просмотра для малых экранов */
+        resizeTextEdit() {
             if (window.innerWidth > 768) {
                 this.prevArrow = 'Предыдущее событие';
                 this.nextArrow = 'Следующее событие';
@@ -1006,11 +946,10 @@ export default {
         },
 
         /**
-         * Переключение между страницами при предпросмотре
+         * Переключение между страницами при просмотре
          * @param prevOrNext
          */
-        switchPage(prevOrNext)
-        {
+        switchPage(prevOrNext) {
             if (prevOrNext === 'next') {
                 if (this.composeDetailsModal.numberOfCurrentEvent < this.composeDetailsModal.numberOfEvents) {
                     this.composeDetailsModal.numberOfCurrentEvent += 1;
@@ -1027,8 +966,7 @@ export default {
          * @param targetScreen Монитор, на котором проверяем
          * @returns {boolean}
          */
-        checkActive(targetScreen)
-        {
+        checkActive(targetScreen) {
             let flag = false;
             for (let i in this.activeRequests) {
                 if (this.activeRequests[i].compose.screen === targetScreen) {
@@ -1036,16 +974,14 @@ export default {
                 }
             }
             return flag;
-        }
+        },
     },
-    mounted()
-    {
+    mounted() {
         this.connect();
         this.getRequests();
         this.resizeTextEdit();
 
-        window.addEventListener('beforeunload', async (event) =>
-        {
+        window.addEventListener('beforeunload', async event => {
             await fetch('/control/refund', {
                 method: 'POST',
                 headers: {
@@ -1059,14 +995,13 @@ export default {
             event.preventDefault();
             event.returnValue = '';
         });
-    }
-}
+    },
+};
 </script>
 
 <template>
     <div class="intro">
-        <detailModals :eventList="eventList" :editFormS="editFormS" :editFormB="editFormB" :editFormL="editFormL" :addForm="addForm" :addEventCmp="addEvent" :delEventCmp="delEvent" :moveEventCmp="moveEvent" :demoMode="false" :currentModalPage="currentModalPage" :customForms="customForms" :editEventCmp="editEvent">
-        </detailModals>
+        <detailModals :eventList="eventList" :editFormS="editFormS" :editFormB="editFormB" :editFormL="editFormL" :addForm="addForm" :addEventCmp="addEvent" :delEventCmp="delEvent" :moveEventCmp="moveEvent" :demoMode="false" :currentModalPage="currentModalPage" :customForms="customForms" :editEventCmp="editEvent"> </detailModals>
 
         <!-- Modal for Deny -->
         <div class="modal fade" id="denyModal" tabindex="-1">
@@ -1079,7 +1014,10 @@ export default {
                     <div class="modal-body">
                         Вы собираетесь отклонить запрос. Вы уверены?
                         <div class="mb-3">
-                            <label for="message-text" class="col-form-label"><br> Комментарий бригаде:</label>
+                            <label for="message-text" class="col-form-label"
+                                ><br />
+                                Комментарий бригаде:</label
+                            >
                             <textarea v-model="this.forModal.comment" @keyup.enter="buttonReject('request')" class="form-control" id="message-text"></textarea>
                         </div>
                     </div>
@@ -1100,15 +1038,19 @@ export default {
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        Вы собираетесь утвердить данное расписание. <br> Вы уверены?
+                        Вы собираетесь утвердить данное расписание. <br />
+                        Вы уверены?
                         <div class="mb-3">
-                            <label for="message-text" class="col-form-label"><br> Комментарий бригаде:</label>
-                            <textarea @keyup.enter="buttonApprove(forModal.obj, (forModal.obj.compose.isSpecial ? eventList?.data : [eventList?.data?.lesson, eventList?.data?.breaktime, eventList?.data?.lunch]))" v-model="this.forModal.comment" class="form-control" id="message-text"></textarea>
+                            <label for="message-text" class="col-form-label"
+                                ><br />
+                                Комментарий бригаде:</label
+                            >
+                            <textarea @keyup.enter="buttonApprove(forModal.obj, forModal.obj.compose.isSpecial ? eventList?.data : [eventList?.data?.lesson, eventList?.data?.breaktime, eventList?.data?.lunch])" v-model="this.forModal.comment" class="form-control" id="message-text"></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                        <button @click="buttonApprove(forModal.obj, (forModal.obj.compose.isSpecial ? eventList?.data : [eventList?.data?.lesson, eventList?.data?.breaktime, eventList?.data?.lunch]))" type="button" class="btn btn-success">Утвердить</button>
+                        <button @click="buttonApprove(forModal.obj, forModal.obj.compose.isSpecial ? eventList?.data : [eventList?.data?.lesson, eventList?.data?.breaktime, eventList?.data?.lunch])" type="button" class="btn btn-success">Утвердить</button>
                     </div>
                 </div>
             </div>
@@ -1119,7 +1061,7 @@ export default {
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h1 class="modal-title fs-5" id="exampleModalToggleLabel"> Выберите действие </h1>
+                        <h1 class="modal-title fs-5" id="exampleModalToggleLabel">Выберите действие</h1>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
@@ -1130,15 +1072,46 @@ export default {
                         Установленную композицию стоит:
                         <div class="row w-100 align-items-center g-1 mt-2">
                             <div class="col-12 col-sm-4">
-                                <input @click="forModal.activeAction = 'return'; forModal.actionData = 'Возвращаю композицию с трансляции.'" type="radio" class="btn-check" name="options" id="queue" autocomplete="off" checked>
+                                <input
+                                    @click="
+                                        forModal.activeAction = 'return';
+                                        forModal.actionData = 'Возвращаю композицию с трансляции.';
+                                    "
+                                    type="radio"
+                                    class="btn-check"
+                                    name="options"
+                                    id="queue"
+                                    autocomplete="off"
+                                    checked
+                                />
                                 <label class="w-100 btn btn-outline-success" for="queue">Вернуть редактору</label>
                             </div>
                             <div class="col-12 col-sm-4">
-                                <input @click="forModal.activeAction = 'queue'; forModal.actionData = new Date()" type="radio" class="btn-check" name="options" id="editor" autocomplete="off">
+                                <input
+                                    @click="
+                                        forModal.activeAction = 'queue';
+                                        forModal.actionData = new Date();
+                                    "
+                                    type="radio"
+                                    class="btn-check"
+                                    name="options"
+                                    id="editor"
+                                    autocomplete="off"
+                                />
                                 <label class="w-100 btn btn-outline-secondary" for="editor">Вернуть в очередь</label>
                             </div>
                             <div class="col-12 col-sm-4">
-                                <input @click="forModal.activeAction = 'delete'; forModal.actionData = {}" type="radio" class="btn-check" name="options" id="delete" autocomplete="off">
+                                <input
+                                    @click="
+                                        forModal.activeAction = 'delete';
+                                        forModal.actionData = {};
+                                    "
+                                    type="radio"
+                                    class="btn-check"
+                                    name="options"
+                                    id="delete"
+                                    autocomplete="off"
+                                />
                                 <label class="w-100 btn btn-outline-danger" for="delete"> Удалить композицию </label>
                             </div>
                         </div>
@@ -1147,7 +1120,7 @@ export default {
                         <div class="w-100">
                             <textarea v-if="forModal.activeAction === 'return'" v-model="forModal.actionData" class="form-control"></textarea>
                             <input v-if="forModal.activeAction === 'queue'" v-model="forModal.actionData" name="time" value="" id="addDate" class="col form-control mt-1" type="date" />
-                            <div v-if="forModal.activeAction === 'delete'" style="color:red">
+                            <div v-if="forModal.activeAction === 'delete'" style="color: red">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-exclamation-triangle-fill" viewBox="0 0 16 16">
                                     <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"></path>
                                 </svg>
@@ -1155,7 +1128,7 @@ export default {
                             </div>
                             <div class="row w-100 align-items-center g-1 mt-2">
                                 <div class="col-12 col-sm-6">
-                                    <button class="w-100 mt-1 btn btn-outline-secondary" data-bs-dismiss="modal"> Оставить в очереди </button>
+                                    <button class="w-100 mt-1 btn btn-outline-secondary" data-bs-dismiss="modal">Оставить в очереди</button>
                                 </div>
                                 <div class="col-12 col-sm-6">
                                     <a @click="setActive()" class="w-100 mt-1 btn btn-success"> Выполнить </a>
@@ -1178,7 +1151,10 @@ export default {
                     <div class="modal-body">
                         Вы собираетесь удалить шаблон из очереди. Он будет возвращен редактору. Вы уверены?
                         <div class="mb-3">
-                            <label for="message-text" class="col-form-label"><br> Комментарий бригаде:</label>
+                            <label for="message-text" class="col-form-label"
+                                ><br />
+                                Комментарий бригаде:</label
+                            >
                             <textarea v-model="this.forModal.comment" @keyup.enter="buttonReject('approved')" class="form-control" id="message-text"></textarea>
                         </div>
                     </div>
@@ -1198,15 +1174,11 @@ export default {
                         <h1 class="modal-title fs-5" id="exampleModalLabela">Подтверждение</h1>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                    <div v-if="!this.forModal.obj.isActive" class="modal-body">
-                        Вы собираетесь сохранить изменения. Вы уверены?
-                    </div>
-                    <div v-if="this.forModal.obj.isActive" class="modal-body">
-                        Вы собираетесь внести изменения на активную трансляцию. Вы уверены?
-                    </div>
+                    <div v-if="!this.forModal.obj.isActive" class="modal-body">Вы собираетесь сохранить изменения. Вы уверены?</div>
+                    <div v-if="this.forModal.obj.isActive" class="modal-body">Вы собираетесь внести изменения на активную трансляцию. Вы уверены?</div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                        <button @click="saveChangesButton(forModal.obj, (forModal.obj.compose.isSpecial ? eventList?.data : [eventList?.data?.lesson, eventList?.data?.breaktime, eventList?.data?.lunch]))" type="button" class="btn btn-success">Уверен</button>
+                        <button @click="saveChangesButton(forModal.obj, forModal.obj.compose.isSpecial ? eventList?.data : [eventList?.data?.lesson, eventList?.data?.breaktime, eventList?.data?.lunch])" type="button" class="btn btn-success">Уверен</button>
                     </div>
                 </div>
             </div>
@@ -1230,28 +1202,59 @@ export default {
                         Старую композицию стоит:
                         <div class="row w-100 align-items-center g-1 mt-2">
                             <div class="col-12 col-sm-4">
-                                <input @click="forModal.activeAction = 'return'; forModal.actionData = 'Возвращаю композицию с трансляции.'" type="radio" class="btn-check" name="options" id="queue" autocomplete="off" checked>
+                                <input
+                                    @click="
+                                        forModal.activeAction = 'return';
+                                        forModal.actionData = 'Возвращаю композицию с трансляции.';
+                                    "
+                                    type="radio"
+                                    class="btn-check"
+                                    name="options"
+                                    id="queue"
+                                    autocomplete="off"
+                                    checked
+                                />
                                 <label class="w-100 btn btn-outline-success" for="queue">Вернуть редактору</label>
                             </div>
                             <div class="col-12 col-sm-4">
-                                <input @click="forModal.activeAction = 'queue'; forModal.actionData = new Date()" type="radio" class="btn-check" name="options" id="editor" autocomplete="off">
+                                <input
+                                    @click="
+                                        forModal.activeAction = 'queue';
+                                        forModal.actionData = new Date();
+                                    "
+                                    type="radio"
+                                    class="btn-check"
+                                    name="options"
+                                    id="editor"
+                                    autocomplete="off"
+                                />
                                 <label class="w-100 btn btn-outline-secondary" for="editor">Вернуть в очередь</label>
                             </div>
                             <div class="col-12 col-sm-4">
-                                <input @click="forModal.activeAction = 'delete'; forModal.actionData = {}" type="radio" class="btn-check" name="options" id="delete" autocomplete="off">
+                                <input
+                                    @click="
+                                        forModal.activeAction = 'delete';
+                                        forModal.actionData = {};
+                                    "
+                                    type="radio"
+                                    class="btn-check"
+                                    name="options"
+                                    id="delete"
+                                    autocomplete="off"
+                                />
                                 <label class="w-100 btn btn-outline-danger" for="delete"> Удалить композицию </label>
                             </div>
                         </div>
                     </div>
                     <div v-if="!forModal.hasActiveOnMonitor" class="modal-body">
                         Вы собираетесь установить выбранную композицию на трансляцию.
-                        <p> Вам необходимо подтвердить данную операцию. </p>
+                        <p>Вам необходимо подтвердить данную операцию.</p>
                     </div>
                     <div class="modal-footer">
                         <div class="w-100">
                             <textarea v-if="forModal.hasActiveOnMonitor && forModal.activeAction === 'return'" v-model="forModal.actionData" class="form-control"></textarea>
                             <input v-if="forModal.hasActiveOnMonitor && forModal.activeAction === 'queue'" v-model="forModal.actionData" name="time" value="" id="addDate" class="col form-control mt-1" type="date" />
-                            <div v-if="forModal.hasActiveOnMonitor && forModal.activeAction === 'delete'" style="color:red">
+                            <div v-if="forModal.hasActiveOnMonitor && forModal.activeAction === 'delete'" style="color: red">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-exclamation-triangle-fill" viewBox="0 0 16 16">
                                     <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"></path>
                                 </svg>
@@ -1259,7 +1262,7 @@ export default {
                             </div>
                             <div class="row w-100 align-items-center g-1 mt-2">
                                 <div class="col-12 col-sm-6">
-                                    <button class="w-100 mt-1 btn btn-outline-secondary" data-bs-dismiss="modal"> Оставить в очереди </button>
+                                    <button class="w-100 mt-1 btn btn-outline-secondary" data-bs-dismiss="modal">Оставить в очереди</button>
                                 </div>
                                 <div class="col-12 col-sm-6">
                                     <a @click="setActive()" class="w-100 mt-1 btn btn-success"> Выполнить </a>
@@ -1277,18 +1280,22 @@ export default {
                 <div class="modal-content">
                     <div class="modal-header row justify-content-between align-items-center">
                         <div class="col-auto m-0">
-                            <h4 class="modal-title fs-5"><strong>{{ this.composeDetailsModal.templateName }}</strong> ({{ this.composeDetailsModal.authorName }}) </h4>
+                            <h4 class="modal-title fs-5">
+                                <strong>{{ this.composeDetailsModal.templateName }}</strong> ({{ this.composeDetailsModal.authorName }})
+                            </h4>
                         </div>
                         <div class="col-auto m-0">
-                            <h5 class="m-0"> <strong> {{ this.composeDetailsModal.numberOfCurrentEvent }}/{{ this.composeDetailsModal.numberOfEvents }} </strong> </h5>
+                            <h5 class="m-0">
+                                <strong> {{ this.composeDetailsModal.numberOfCurrentEvent }}/{{ this.composeDetailsModal.numberOfEvents }} </strong>
+                            </h5>
                         </div>
                         <div class="col-auto">
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                     </div>
                     <div v-if="this.composeDetailsModal.previewEvents[this.composeDetailsModal.numberOfCurrentEvent - 1] !== undefined" class="modal-body">
-                        <img v-if="this.composeDetailsModal.previewEvents[this.composeDetailsModal.numberOfCurrentEvent - 1].type === 'image'" :src="this.composeDetailsModal.previewEvents[this.composeDetailsModal.numberOfCurrentEvent - 1].src" style="object-fit: contain; width: 100%; height: 100%;" alt="">
-                        <iframe v-if="this.composeDetailsModal.previewEvents[this.composeDetailsModal.numberOfCurrentEvent - 1].type === 'webform'" :src="this.composeDetailsModal.previewEvents[this.composeDetailsModal.numberOfCurrentEvent - 1].src" style="object-fit: contain; width: 100%; height: 100%;" alt=""></iframe>
+                        <img v-if="this.composeDetailsModal.previewEvents[this.composeDetailsModal.numberOfCurrentEvent - 1].type === 'image'" :src="this.composeDetailsModal.previewEvents[this.composeDetailsModal.numberOfCurrentEvent - 1].src" style="object-fit: contain; width: 100%; height: 100%" alt="" />
+                        <iframe v-if="this.composeDetailsModal.previewEvents[this.composeDetailsModal.numberOfCurrentEvent - 1].type === 'webform'" :src="this.composeDetailsModal.previewEvents[this.composeDetailsModal.numberOfCurrentEvent - 1].src" style="object-fit: contain; width: 100%; height: 100%" alt=""></iframe>
                     </div>
                     <div class="modal-footer row justify-content-center">
                         <div class="col-auto">
@@ -1309,7 +1316,7 @@ export default {
                         </div>
                         <div class="col-12 col-lg-auto">
                             <select v-model="this.composeDetailsModal.numberOfCurrentEvent" class="form-select">
-                                <option v-for="(event, index) in this.composeDetailsModal.previewEvents" :value="index + 1"> {{ index + 1 }}. {{ event.name }}</option>
+                                <option v-for="(event, index) in this.composeDetailsModal.previewEvents" :value="index + 1">{{ index + 1 }}. {{ event.name }}</option>
                             </select>
                         </div>
                     </div>
@@ -1318,7 +1325,7 @@ export default {
         </div>
 
         <div class="container">
-            <h6 class="text mt-4"> Управление отображением </h6>
+            <h6 class="text mt-4">Управление отображением</h6>
             <!-- Подстилка - content -->
             <div class="content">
                 <!-- ЗАГОЛОВКИ ВКЛАДОК -->
@@ -1342,7 +1349,7 @@ export default {
                 <div class="tab-content" id="pills-tabContent1">
                     <!-- ВХОДЯЩИЕ ЗАРОСЫ НА МОДЕРАЦИЮ -->
                     <div class="tab-pane fade show active" id="pills-request" role="tabpanel" aria-labelledby="pills-request-tab" tabindex="0">
-                        <div v-if="waitingRequests.length === 0"> Необработанных запросов нет </div>
+                        <div v-if="waitingRequests.length === 0">Необработанных запросов нет</div>
                         <ul v-if="waitingRequests.length > 0" class="list-group moder">
                             <!-- ШАБЛОН -->
                             <li v-for="(req, index) in waitingRequests" class="list-group-item">
@@ -1376,14 +1383,12 @@ export default {
                                 <!-- ТЕЛО ШАБЛОНА ДЛЯ СТАНДАРТНОГО ТИПА -->
                                 <!-- 1. ПАРЫ -->
                                 <div v-if="!req.compose.isSpecial" class="row w-100 align-items-center mt-1 ms-0 me-0">
-                                    <div class="col-12 col-sm-4 col-md-3 col-lg-2 p-0">
-                                        Пары:
-                                    </div>
+                                    <div class="col-12 col-sm-4 col-md-3 col-lg-2 p-0">Пары:</div>
                                     <div class="col-12 col-sm-8 col-md-9 col-lg-10 p-0">
                                         <div class="d-flex w-100">
                                             <select v-model="req.compose.programs[0]" @change="eventList = []" class="form-select form-select-sm me-1" :disabled="!waitingRequests[index].isStartedProcess || req.changer !== session().name">
-                                                <option selected :value="req.compose.programs[0]"> {{ req.compose.programs[0].name }} </option>
-                                                <option v-for="tmp in templatesToReplace" :value="tmp"> {{ tmp.name }} </option>
+                                                <option selected :value="req.compose.programs[0]">{{ req.compose.programs[0].name }}</option>
+                                                <option v-for="tmp in templatesToReplace" :value="tmp">{{ tmp.name }}</option>
                                             </select>
                                             <button v-if="waitingRequests[index].isStartedProcess && req.changer === session().name" @click="openPreview(req, req.compose.programs[0])" type="button" data-bs-toggle="modal" data-bs-target="#PreviewModal" class="btn btn-info btn-sm">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-fill" viewBox="0 0 16 16">
@@ -1396,14 +1401,12 @@ export default {
                                 </div>
                                 <!-- 2. ПЕРЕРЫВ -->
                                 <div v-if="!req.compose.isSpecial" class="row w-100 align-items-center mt-1 ms-0 me-0">
-                                    <div class="col-12 col-sm-4 col-md-3 col-lg-2 p-0">
-                                        Перерыв:
-                                    </div>
+                                    <div class="col-12 col-sm-4 col-md-3 col-lg-2 p-0">Перерыв:</div>
                                     <div class="col-12 col-sm-8 col-md-9 col-lg-10 p-0">
                                         <div class="d-flex w-100">
                                             <select v-model="req.compose.programs[1]" @change="eventList = []" class="form-select form-select-sm me-1" :disabled="!waitingRequests[index].isStartedProcess || req.changer !== session().name">
-                                                <option selected :value="req.compose.programs[1]"> {{ req.compose.programs[1].name }} </option>
-                                                <option v-for="tmp in templatesToReplace" :value="tmp"> {{ tmp.name }} </option>
+                                                <option selected :value="req.compose.programs[1]">{{ req.compose.programs[1].name }}</option>
+                                                <option v-for="tmp in templatesToReplace" :value="tmp">{{ tmp.name }}</option>
                                             </select>
                                             <button v-if="waitingRequests[index].isStartedProcess && req.changer !== session().name" @click="openPreview(req, req.compose.programs[1])" type="button" data-bs-toggle="modal" data-bs-target="#PreviewModal" class="btn btn-info btn-sm">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-fill" viewBox="0 0 16 16">
@@ -1416,14 +1419,12 @@ export default {
                                 </div>
                                 <!-- 3. ОБЕД -->
                                 <div v-if="!req.compose.isSpecial" class="row w-100 align-items-center mt-1 ms-0 me-0">
-                                    <div class="col-12 col-sm-4 col-md-3 col-lg-2 p-0">
-                                        Обед:
-                                    </div>
+                                    <div class="col-12 col-sm-4 col-md-3 col-lg-2 p-0">Обед:</div>
                                     <div class="col-12 col-sm-8 col-md-9 col-lg-10 p-0">
                                         <div class="d-flex w-100">
                                             <select v-model="req.compose.programs[2]" @change="eventList = []" class="form-select form-select-sm me-1" :disabled="!waitingRequests[index].isStartedProcess || req.changer !== session().name">
-                                                <option selected :value="req.compose.programs[2]"> {{ req.compose.programs[2].name }} </option>
-                                                <option v-for="tmp in templatesToReplace" :value="tmp"> {{ tmp.name }} </option>
+                                                <option selected :value="req.compose.programs[2]">{{ req.compose.programs[2].name }}</option>
+                                                <option v-for="tmp in templatesToReplace" :value="tmp">{{ tmp.name }}</option>
                                             </select>
                                             <button v-if="waitingRequests[index].isStartedProcess && req.changer === session().name" @click="openPreview(req, req.compose.programs[2])" type="button" data-bs-toggle="modal" data-bs-target="#PreviewModal" class="btn btn-info btn-sm">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-fill" viewBox="0 0 16 16">
@@ -1436,10 +1437,10 @@ export default {
                                 </div>
                                 <!-- СПЕЦ. ШАБЛОН -->
                                 <div v-if="req.compose.isSpecial" v-for="(tmp, dex) in req.compose.programs" class="d-flex w-100 justify-content-between gap-1 mt-1">
-                                    <input v-model="req.compose.programs[dex].timeToSwap" type="time" class="form-control form-select-sm" :disabled="!waitingRequests[index].isStartedProcess || req.changer !== session().name">
+                                    <input v-model="req.compose.programs[dex].timeToSwap" type="time" class="form-control form-select-sm" :disabled="!waitingRequests[index].isStartedProcess || req.changer !== session().name" />
                                     <select v-model="req.compose.programs[dex]" class="form-select form-select-sm" aria-label="Default select example" :disabled="!waitingRequests[index].isStartedProcess || req.changer !== session().name">
-                                        <option :value="req.compose.programs[dex]" selected> {{ req.compose.programs[dex].name }} </option>
-                                        <option v-for="tmp in templatesToReplace" :value="tmp"> {{ tmp.name }} </option>
+                                        <option :value="req.compose.programs[dex]" selected>{{ req.compose.programs[dex].name }}</option>
+                                        <option v-for="tmp in templatesToReplace" :value="tmp">{{ tmp.name }}</option>
                                     </select>
                                     <!-- УДАЛИТЬ -->
                                     <button v-if="waitingRequests[index].isStartedProcess && req.changer === session().name" @click="req.eventList.splice(dex, 1)" type="button" class="btn btn-outline-danger btn-sm">
@@ -1465,8 +1466,7 @@ export default {
                                 <div class="row w-100 align-items-center g-1 mt-2">
                                     <div class="col-12 col-sm-6 col-md mb-1 form-check form-switch">
                                         <input v-model="req.compose.isSpecial" class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckDefault26" :disabled="!(req.isStartedProcess && (userProcess === req.id || req.changer === session().name))" />
-                                        <label class="form-check-label" for="flexSwitchCheckDefault26"> Особое расписание
-                                        </label>
+                                        <label class="form-check-label" for="flexSwitchCheckDefault26"> Особое расписание </label>
                                     </div>
                                     <!--КНОПКИ ОБРАБОТКИ СОБЫТИЯ-->
                                     <div v-if="!req.isStartedProcess" class="col-12 col-sm-6 col-md-5 col-lg-4 col-xl-3">
@@ -1508,7 +1508,9 @@ export default {
                                         <!-- Button trigger Deny modal -->
                                         <button @click="triggerModal('deny', req, index)" type="button" class="btn btn-outline-danger w-100">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-hand-thumbs-down" viewBox="0 0 16 16">
-                                                <path d="M8.864 15.674c-.956.24-1.843-.484-1.908-1.42-.072-1.05-.23-2.015-.428-2.59-.125-.36-.479-1.012-1.04-1.638-.557-.624-1.282-1.179-2.131-1.41C2.685 8.432 2 7.85 2 7V3c0-.845.682-1.464 1.448-1.546 1.07-.113 1.564-.415 2.068-.723l.048-.029c.272-.166.578-.349.97-.484C6.931.08 7.395 0 8 0h3.5c.937 0 1.599.478 1.934 1.064.164.287.254.607.254.913 0 .152-.023.312-.077.464.201.262.38.577.488.9.11.33.172.762.004 1.15.069.13.12.268.159.403.077.27.113.567.113.856 0 .289-.036.586-.113.856-.035.12-.08.244-.138.363.394.571.418 1.2.234 1.733-.206.592-.682 1.1-1.2 1.272-.847.283-1.803.276-2.516.211a9.877 9.877 0 0 1-.443-.05 9.364 9.364 0 0 1-.062 4.51c-.138.508-.55.848-1.012.964l-.261.065zM11.5 1H8c-.51 0-.863.068-1.14.163-.281.097-.506.229-.776.393l-.04.025c-.555.338-1.198.73-2.49.868-.333.035-.554.29-.554.55V7c0 .255.226.543.62.65 1.095.3 1.977.997 2.614 1.709.635.71 1.064 1.475 1.238 1.977.243.7.407 1.768.482 2.85.025.362.36.595.667.518l.262-.065c.16-.04.258-.144.288-.255a8.34 8.34 0 0 0-.145-4.726.5.5 0 0 1 .595-.643h.003l.014.004.058.013a8.912 8.912 0 0 0 1.036.157c.663.06 1.457.054 2.11-.163.175-.059.45-.301.57-.651.107-.308.087-.67-.266-1.021L12.793 7l.353-.354c.043-.042.105-.14.154-.315.048-.167.075-.37.075-.581 0-.211-.027-.414-.075-.581-.05-.174-.111-.273-.154-.315l-.353-.354.353-.354c.047-.047.109-.176.005-.488a2.224 2.224 0 0 0-.505-.804l-.353-.354.353-.354c.006-.005.041-.05.041-.17a.866.866 0 0 0-.121-.415C12.4 1.272 12.063 1 11.5 1z" />
+                                                <path
+                                                    d="M8.864 15.674c-.956.24-1.843-.484-1.908-1.42-.072-1.05-.23-2.015-.428-2.59-.125-.36-.479-1.012-1.04-1.638-.557-.624-1.282-1.179-2.131-1.41C2.685 8.432 2 7.85 2 7V3c0-.845.682-1.464 1.448-1.546 1.07-.113 1.564-.415 2.068-.723l.048-.029c.272-.166.578-.349.97-.484C6.931.08 7.395 0 8 0h3.5c.937 0 1.599.478 1.934 1.064.164.287.254.607.254.913 0 .152-.023.312-.077.464.201.262.38.577.488.9.11.33.172.762.004 1.15.069.13.12.268.159.403.077.27.113.567.113.856 0 .289-.036.586-.113.856-.035.12-.08.244-.138.363.394.571.418 1.2.234 1.733-.206.592-.682 1.1-1.2 1.272-.847.283-1.803.276-2.516.211a9.877 9.877 0 0 1-.443-.05 9.364 9.364 0 0 1-.062 4.51c-.138.508-.55.848-1.012.964l-.261.065zM11.5 1H8c-.51 0-.863.068-1.14.163-.281.097-.506.229-.776.393l-.04.025c-.555.338-1.198.73-2.49.868-.333.035-.554.29-.554.55V7c0 .255.226.543.62.65 1.095.3 1.977.997 2.614 1.709.635.71 1.064 1.475 1.238 1.977.243.7.407 1.768.482 2.85.025.362.36.595.667.518l.262-.065c.16-.04.258-.144.288-.255a8.34 8.34 0 0 0-.145-4.726.5.5 0 0 1 .595-.643h.003l.014.004.058.013a8.912 8.912 0 0 0 1.036.157c.663.06 1.457.054 2.11-.163.175-.059.45-.301.57-.651.107-.308.087-.67-.266-1.021L12.793 7l.353-.354c.043-.042.105-.14.154-.315.048-.167.075-.37.075-.581 0-.211-.027-.414-.075-.581-.05-.174-.111-.273-.154-.315l-.353-.354.353-.354c.047-.047.109-.176.005-.488a2.224 2.224 0 0 0-.505-.804l-.353-.354.353-.354c.006-.005.041-.05.041-.17a.866.866 0 0 0-.121-.415C12.4 1.272 12.063 1 11.5 1z"
+                                                />
                                             </svg>
                                             Отклонить
                                         </button>
@@ -1532,7 +1534,7 @@ export default {
 
                     <!-- АКТИВНОЕ ОТОБРАЖЕНИЕ (ЧТО ИГРАЕТ СЕГОДНЯ) -->
                     <div class="tab-pane fade" id="pills-display" role="tabpanel" aria-labelledby="pills-display-tab" tabindex="0">
-                        <div v-if="activeRequests.length === 0"> Нет активной программы трансляции </div>
+                        <div v-if="activeRequests.length === 0">Нет активной программы трансляции</div>
                         <div v-if="activeRequests.length > 0" v-for="(screen, index) in activeRequests" class="row g-3">
                             <!-- ПЛАШКА -->
                             <div class="col-xl-4 col-lg-6 col-md-6 col-sm-12 col-xs-12 mb-3 mb-sm-0 g-3">
@@ -1568,7 +1570,7 @@ export default {
                                         </div>
                                         <!-- ЛАБЕЛ СУТАНДАРДЭ -->
                                         <div v-if="!screen.compose.isSpecial" class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-                                            <div class="progress-bar progress-bar-striped bg-success progress-bar-animated" id="progress_workdays"> </div>
+                                            <div class="progress-bar progress-bar-striped bg-success progress-bar-animated" id="progress_workdays"></div>
                                         </div>
                                         <div v-if="!screen.compose.isSpecial" class="d-flex w-100 justify-content-between align-items-center">
                                             <div id="time_workdays"></div>
@@ -1576,7 +1578,7 @@ export default {
                                         </div>
                                         <!-- ЛАБЭЛ СУПЭШШИАЛ -->
                                         <div v-if="screen.compose.isSpecial" class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-                                            <div class="progress-bar progress-bar-striped bg-success progress-bar-animated" id="progress_specdays"> </div>
+                                            <div class="progress-bar progress-bar-striped bg-success progress-bar-animated" id="progress_specdays"></div>
                                         </div>
                                         <div v-if="screen.compose.isSpecial" class="d-flex w-100 justify-content-between align-items-center">
                                             <div id="time_specdays"></div>
@@ -1588,12 +1590,12 @@ export default {
                                                 <!-- СУТАНДАРДЭ ТЭМУПУЛИТЭ -->
                                                 <!-- 1. ПАРЫ -->
                                                 <div v-if="!screen.compose.isSpecial" class="row w-100 align-items-center mt-1 ms-0 me-0">
-                                                    <div class="col-12 col-sm-5 col-md-4 p-0"> Пары: </div>
+                                                    <div class="col-12 col-sm-5 col-md-4 p-0">Пары:</div>
                                                     <div class="col-12 col-sm-7 col-md-8 p-0">
                                                         <div class="d-flex w-100">
                                                             <select v-model="screen.compose.programs[0]" @change="eventList = []" class="form-select form-select-sm me-1" :disabled="!activeRequests[index].isStartedProcess || screen.changer !== session().name">
-                                                                <option selected :value="screen.compose.programs[0]"> {{ screen.compose.programs[0].name }} </option>
-                                                                <option v-for="tmp in templatesToReplace" :value="tmp"> {{ tmp.name }} </option>
+                                                                <option selected :value="screen.compose.programs[0]">{{ screen.compose.programs[0].name }}</option>
+                                                                <option v-for="tmp in templatesToReplace" :value="tmp">{{ tmp.name }}</option>
                                                             </select>
                                                             <button v-if="activeRequests[index].isStartedProcess && screen.changer === this.session().name" @click="openPreview(screen, screen.compose.programs[0])" type="button" data-bs-toggle="modal" data-bs-target="#PreviewModal" class="btn btn-info btn-sm">
                                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-fill" viewBox="0 0 16 16">
@@ -1606,12 +1608,12 @@ export default {
                                                 </div>
                                                 <!-- 2. ПЕРЕРЫВ -->
                                                 <div v-if="!screen.compose.isSpecial" class="row w-100 align-items-center mt-1 ms-0 me-0">
-                                                    <div class="col-12 col-sm-5 col-md-4 p-0"> Перерыв: </div>
+                                                    <div class="col-12 col-sm-5 col-md-4 p-0">Перерыв:</div>
                                                     <div class="col-12 col-sm-7 col-md-8 p-0">
                                                         <div class="d-flex w-100">
                                                             <select v-model="screen.compose.programs[1]" @change="eventList = []" class="form-select form-select-sm me-1" :disabled="!activeRequests[index].isStartedProcess || screen.changer !== session().name">
-                                                                <option selected :value="screen.compose.programs[1]"> {{ screen.compose.programs[1].name }} </option>
-                                                                <option v-for="tmp in templatesToReplace" :value="tmp"> {{ tmp.name }} </option>
+                                                                <option selected :value="screen.compose.programs[1]">{{ screen.compose.programs[1].name }}</option>
+                                                                <option v-for="tmp in templatesToReplace" :value="tmp">{{ tmp.name }}</option>
                                                             </select>
                                                             <button v-if="activeRequests[index].isStartedProcess && screen.changer === session().name" @click="openPreview(screen, screen.compose.programs[1])" type="button" data-bs-toggle="modal" data-bs-target="#PreviewModal" class="btn btn-info btn-sm">
                                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-fill" viewBox="0 0 16 16">
@@ -1624,12 +1626,12 @@ export default {
                                                 </div>
                                                 <!-- 3. ОБЕД -->
                                                 <div v-if="!screen.compose.isSpecial" class="row w-100 align-items-center mt-1 ms-0 me-0">
-                                                    <div class="col-12 col-sm-5 col-md-4 p-0"> Обед: </div>
+                                                    <div class="col-12 col-sm-5 col-md-4 p-0">Обед:</div>
                                                     <div class="col-12 col-sm-7 col-md-8 p-0">
                                                         <div class="d-flex w-100">
                                                             <select v-model="screen.compose.programs[2]" @change="eventList = []" class="form-select form-select-sm me-1" :disabled="!activeRequests[index].isStartedProcess || screen.changer !== session().name">
-                                                                <option selected :value="screen.compose.programs[2]"> {{ screen.compose.programs[2].name }} </option>
-                                                                <option v-for="tmp in templatesToReplace" :value="tmp"> {{ tmp.name }} </option>
+                                                                <option selected :value="screen.compose.programs[2]">{{ screen.compose.programs[2].name }}</option>
+                                                                <option v-for="tmp in templatesToReplace" :value="tmp">{{ tmp.name }}</option>
                                                             </select>
                                                             <button v-if="activeRequests[index].isStartedProcess && screen.changer === session().name" @click="openPreview(screen, screen.compose.programs[2])" type="button" data-bs-toggle="modal" data-bs-target="#PreviewModal" class="btn btn-info btn-sm">
                                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-fill" viewBox="0 0 16 16">
@@ -1642,10 +1644,10 @@ export default {
                                                 </div>
                                                 <!-- СУПЭШШИАЛ ТЭМУПУЛИТЭ -->
                                                 <div v-if="screen.compose.isSpecial" v-for="(tmp, dex) in screen.compose.programs" class="d-flex w-100 justify-content-between gap-1 mt-1">
-                                                    <input v-model="screen.compose.programs[dex].timeToSwap" type="time" class="form-control form-select-sm" :disabled="!activeRequests[index].isStartedProcess || screen.changer !== session().name">
+                                                    <input v-model="screen.compose.programs[dex].timeToSwap" type="time" class="form-control form-select-sm" :disabled="!activeRequests[index].isStartedProcess || screen.changer !== session().name" />
                                                     <select v-model="screen.compose.programs[dex]" class="form-select form-select-sm" aria-label="Default select example" :disabled="!activeRequests[index].isStartedProcess || screen.changer !== session().name">
-                                                        <option :value="screen.compose.programs[dex]" selected> {{ screen.compose.programs[dex].name }} </option>
-                                                        <option v-for="tmp in templatesToReplace" :value="tmp"> {{ tmp.name }} </option>
+                                                        <option :value="screen.compose.programs[dex]" selected>{{ screen.compose.programs[dex].name }}</option>
+                                                        <option v-for="tmp in templatesToReplace" :value="tmp">{{ tmp.name }}</option>
                                                     </select>
                                                     <!-- УДАЛИТЬ -->
                                                     <button v-if="activeRequests[index].isStartedProcess && screen.changer === session().name" @click="screen.compose.programs.splice(dex, 1)" type="button" class="btn btn-outline-danger btn-sm">
@@ -1682,12 +1684,12 @@ export default {
                                         <!-- Button trigger Delete follow modal -->
                                         <!-- <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteFollowModal"> Не отслеживать</button> -->
                                         <div v-if="screen.isStartedProcess && (userProcess === screen.id || screen.changer === session().name)" class="row justify-content-end me-1">
-                                            <button @click="endProcessing(screen, 'act')" type="button" class="btn btn-outline-secondary col-auto me-1 mb-1"> Отмена </button>
+                                            <button @click="endProcessing(screen, 'act')" type="button" class="btn btn-outline-secondary col-auto me-1 mb-1">Отмена</button>
                                             <!-- Button trigger Details modal -->
                                             <button v-if="screen.compose.isSpecial" @click="openDetails(screen)" type="button" class="btn btn-outline-info col-auto me-1 mb-1">Просмотр</button>
                                             <button v-if="!screen.compose.isSpecial" @click="openDetails(screen)" type="button" class="btn btn-outline-info col-auto me-1 mb-1">Просмотр</button>
                                             <!-- Button trigger Confirm modal -->
-                                            <button @click="triggerModal('save', screen, index)" type="button" class="btn btn-success col-auto me-1 mb-1"> Сохранить </button>
+                                            <button @click="triggerModal('save', screen, index)" type="button" class="btn btn-success col-auto me-1 mb-1">Сохранить</button>
                                         </div>
                                         <div v-if="screen.isStartedProcess && screen.changer !== session().name">
                                             Ведется обработка: <i> "{{ screen.changer }}" </i>
@@ -1711,7 +1713,7 @@ export default {
 
                     <!-- ОЧЕРЕДЬ ШАБЛОНОВ НА ОТОБРАЖЕНИЕ (УЖЕ УТВЕРЖДЕННЫЕ)  -->
                     <div class="tab-pane fade" id="pills-queue" role="tabpanel" aria-labelledby="pills-queue-tab" tabindex="0">
-                        <div v-if="approvedRequests.length === 0"> Очередь на трансляцию пуста </div>
+                        <div v-if="approvedRequests.length === 0">Очередь на трансляцию пуста</div>
                         <ul v-if="approvedRequests.length > 0" class="list-group moder">
                             <li v-for="(acc, index) in approvedRequests" class="list-group-item">
                                 <!-- ШАБЛОН -->
@@ -1751,12 +1753,12 @@ export default {
                                 </div>
                                 <!-- 1. ПАРЫ -->
                                 <div v-if="!acc.compose.isSpecial" class="row w-100 align-items-center mt-1 ms-0 me-0">
-                                    <div class="col-12 col-sm-4 col-md-3 col-lg-2 p-0"> Пары: </div>
+                                    <div class="col-12 col-sm-4 col-md-3 col-lg-2 p-0">Пары:</div>
                                     <div class="col-12 col-sm-8 col-md-9 col-lg-10 p-0">
                                         <div class="d-flex w-100">
                                             <select v-model="acc.compose.programs[0]" @change="eventList = []" class="form-select form-select-sm me-1" :disabled="!approvedRequests[index].isStartedProcess || acc.changer !== session().name">
-                                                <option selected :value="acc.compose.programs[0]"> {{ acc.compose.programs[0].name }} </option>
-                                                <option v-for="tmp in templatesToReplace" :value="tmp"> {{ tmp.name }} </option>
+                                                <option selected :value="acc.compose.programs[0]">{{ acc.compose.programs[0].name }}</option>
+                                                <option v-for="tmp in templatesToReplace" :value="tmp">{{ tmp.name }}</option>
                                             </select>
                                             <button v-if="approvedRequests[index].isStartedProcess && acc.changer === session().name" @click="openPreview(acc, acc.compose.programs[0])" type="button" data-bs-toggle="modal" data-bs-target="#PreviewModal" class="btn btn-info btn-sm">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-fill" viewBox="0 0 16 16">
@@ -1769,12 +1771,12 @@ export default {
                                 </div>
                                 <!-- 2. ПЕРЕРЫВ -->
                                 <div v-if="!acc.compose.isSpecial" class="row w-100 align-items-center mt-1 ms-0 me-0">
-                                    <div class="col-12 col-sm-4 col-md-3 col-lg-2 p-0"> Перерыв: </div>
+                                    <div class="col-12 col-sm-4 col-md-3 col-lg-2 p-0">Перерыв:</div>
                                     <div class="col-12 col-sm-8 col-md-9 col-lg-10 p-0">
                                         <div class="d-flex w-100">
                                             <select v-model="acc.compose.programs[1]" @change="eventList = []" class="form-select form-select-sm me-1" :disabled="!approvedRequests[index].isStartedProcess || acc.changer !== session().name">
-                                                <option selected :value="acc.compose.programs[1]"> {{ acc.compose.programs[1].name }} </option>
-                                                <option v-for="tmp in templatesToReplace" :value="tmp"> {{ tmp.name }} </option>
+                                                <option selected :value="acc.compose.programs[1]">{{ acc.compose.programs[1].name }}</option>
+                                                <option v-for="tmp in templatesToReplace" :value="tmp">{{ tmp.name }}</option>
                                             </select>
                                             <button v-if="approvedRequests[index].isStartedProcess && acc.changer === session().name" @click="openPreview(acc, acc.compose.programs[1])" type="button" data-bs-toggle="modal" data-bs-target="#PreviewModal" class="btn btn-info btn-sm">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-fill" viewBox="0 0 16 16">
@@ -1787,12 +1789,12 @@ export default {
                                 </div>
                                 <!-- 3. ОБЕД -->
                                 <div v-if="!acc.compose.isSpecial" class="row w-100 align-items-center mt-1 ms-0 me-0">
-                                    <div class="col-12 col-sm-4 col-md-3 col-lg-2 p-0"> Обед: </div>
+                                    <div class="col-12 col-sm-4 col-md-3 col-lg-2 p-0">Обед:</div>
                                     <div class="col-12 col-sm-8 col-md-9 col-lg-10 p-0">
                                         <div class="d-flex w-100">
                                             <select v-model="acc.compose.programs[2]" @change="eventList = []" class="form-select form-select-sm me-1" :disabled="!approvedRequests[index].isStartedProcess || acc.changer !== session().name">
-                                                <option selected :value="acc.compose.programs[2]"> {{ acc.compose.programs[2].name }} </option>
-                                                <option v-for="tmp in templatesToReplace" :value="tmp"> {{ tmp.name }}</option>
+                                                <option selected :value="acc.compose.programs[2]">{{ acc.compose.programs[2].name }}</option>
+                                                <option v-for="tmp in templatesToReplace" :value="tmp">{{ tmp.name }}</option>
                                             </select>
                                             <button v-if="approvedRequests[index].isStartedProcess && acc.changer === session().name" @click="openPreview(acc, acc.compose.programs[2])" type="button" data-bs-toggle="modal" data-bs-target="#PreviewModal" class="btn btn-info btn-sm">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-fill" viewBox="0 0 16 16">
@@ -1805,10 +1807,10 @@ export default {
                                 </div>
                                 <!-- СПЕЦТИП -->
                                 <div v-if="acc.compose.isSpecial" v-for="(tmp, dex) in acc.compose.programs" class="d-flex w-100 justify-content-between gap-1 mt-1">
-                                    <input v-model="acc.compose.programs[dex].timeToSwap" type="time" class="form-control form-select-sm" :disabled="!approvedRequests[index].isStartedProcess || acc.changer !== session().name">
-                                    <select v-model="acc.compose.programs[dex]" class="form-select form-select-sm" aria-label="Default select example" :disabled="(!approvedRequests[index].isStartedProcess || acc.changer !== session().name)">
-                                        <option :value="acc.compose.programs[dex]" selected> {{ acc.compose.programs[dex].name }} </option>
-                                        <option v-for="tmp in templatesToReplace" :value="tmp"> {{ tmp.name }} </option>
+                                    <input v-model="acc.compose.programs[dex].timeToSwap" type="time" class="form-control form-select-sm" :disabled="!approvedRequests[index].isStartedProcess || acc.changer !== session().name" />
+                                    <select v-model="acc.compose.programs[dex]" class="form-select form-select-sm" aria-label="Default select example" :disabled="!approvedRequests[index].isStartedProcess || acc.changer !== session().name">
+                                        <option :value="acc.compose.programs[dex]" selected>{{ acc.compose.programs[dex].name }}</option>
+                                        <option v-for="tmp in templatesToReplace" :value="tmp">{{ tmp.name }}</option>
                                     </select>
                                     <!-- УДАЛИТЬ -->
                                     <button v-if="approvedRequests[index].isStartedProcess && acc.changer === session().name" @click="acc.eventList.splice(dex, 1)" type="button" class="btn btn-outline-danger btn-sm">
@@ -1827,8 +1829,7 @@ export default {
                                 <!-- КНОПКА "ДОБАВИТЬ" ВНУТРИ ШАБЛОНОВ ОСОБОГО ТИПА -->
                                 <button v-if="acc.compose.isSpecial && approvedRequests[index].isStartedProcess && acc.changer === session().name" @click="addField(acc.compose.programs)" type="button" class="btn btn-outline-success btn-sm mt-1">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16">
-                                        <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z">
-                                        </path>
+                                        <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z"></path>
                                     </svg>
                                     Добавить
                                 </button>
@@ -1836,8 +1837,7 @@ export default {
                                 <div class="row w-100 align-items-center g-1 mt-2">
                                     <div class="col-12 col-sm-12 col-md mb-1 form-check form-switch">
                                         <input v-model="acc.compose.isSpecial" class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckDefault" :disabled="!(acc.isStartedProcess && (userProcess === acc.id || acc.changer === session().name))" />
-                                        <label class="form-check-label" for="flexSwitchCheckDefault"> Особое расписание
-                                        </label>
+                                        <label class="form-check-label" for="flexSwitchCheckDefault"> Особое расписание </label>
                                     </div>
                                     <!--КНОПКИ ОБРАБОТКИ СОБЫТИЯ-->
                                     <div v-if="!acc.isStartedProcess" class="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">

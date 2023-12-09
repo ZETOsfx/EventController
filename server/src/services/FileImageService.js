@@ -148,7 +148,21 @@ class FileImageService {
      */
     async clearExpires() {
         const currentDate = new Date(Date.now());
-        await File.destroy({
+
+        const files = await File.findAll({
+            where: {
+                expires: {
+                    [Op.lt]: currentDate,
+                },
+            },
+            attributes: ['name', 'src'],
+        });
+
+        for (let file of files) {
+            fs.unlinkSync(path.join(process.env.UPLOAD_PATH_ORIGIN, '/', file.src.split('/')[1]));
+        }
+
+        return File.destroy({
             where: {
                 expires: {
                     [Op.lt]: currentDate,

@@ -2,7 +2,7 @@
 import detailModals from '../components/detailModals.vue';
 
 export default {
-    inject: ['session', 'socket', 'options', 'toast', 'clickBlock', 'formNextFocus'],
+    inject: ['session', 'socket', 'toast', 'clickBlock', 'formNextFocus', 'request'],
     components: {
         detailModals,
     },
@@ -16,7 +16,7 @@ export default {
             customForms: [],         // Список форм редактирования для спец. шаблонов
             composeDetailsModal: {
                 programObj: {},
-                templateName: '',           // Имя предпросматриваемого шаблона
+                templateName: '',           // Имя просматриваемого шаблона
                 authorName: '',             // Автор этого самого шаблона
                 withChanges: false,         // Наличие изменений
                 previewEvents: [],          // События данного шаблона
@@ -242,17 +242,8 @@ export default {
                 this.modalSend = new bootstrap.Modal(document.getElementById('ModalSend'));
             }
 
-            let settingData = await fetch('/setting/all', {
-                method: 'GET',
-                headers: new Headers({
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                    'x-access-token': JSON.parse(localStorage.getItem('user')).token,
-                }),
-            });
-            settingData = await settingData.json();
-
+            let settingData = await this.request('/setting/all', 'GET');
+            
             if (settingData.status === 'success') {
                 this.programs = settingData.data.programs;
                 this.allComposes = settingData.data.composes;
@@ -269,17 +260,8 @@ export default {
 
             this.switchComposesView(false);
 
-            let files = await fetch(`/files/img`, {
-                method: 'GET',
-                headers: new Headers({
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                    'x-access-token': JSON.parse(localStorage.getItem('user')).token,
-                })
-            });
-            files = await files.json();
-
+            let files = await this.request('/files/img', 'GET');
+           
             if (files.status === 'success') {
                 files.data.forEach((file) =>
                 {
@@ -308,16 +290,7 @@ export default {
             document.getElementById('startDate').value = minDate;
             this.composeTargetDate = minDate;
 
-            let response = await fetch('/accounts', {
-                method: 'GET',
-                headers: new Headers({
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                    'x-access-token': JSON.parse(localStorage.getItem('user')).token,
-                }),
-            });
-            response = await response.json();
+            let response = await this.request('/accounts', 'GET');
             this.users = response.data;
         },
 
@@ -422,41 +395,43 @@ export default {
             this.forModal.newType = tmpType;
             if (this.format.test(name)) {
                 this.toast('error', 'Имя шаблона не должно содержать специальных символов: \n' + this.format);
+                return;
             } else if (name.length > 30) {
-                this.toast('error', 'Полученно слишком длинное наименование шаблона. \nПроверьте, пожалуйста, правильность введённых данных \nРазрешено символов: 30. Получено: ' + name.length);
+                this.toast('error', 'Получено слишком длинное наименование шаблона. \nПроверьте, пожалуйста, правильность введённых данных \nРазрешено символов: 30. Получено: ' + name.length);
+                return;
             } else if (name === "") {
                 this.toast('error', 'Заполните имя нового шаблона!');
+                return;
             } else if (tmpType === 'copy' && this.openedProgramId === '') {
                 this.toast('error', 'Для создания копии шаблона необходимо открыть шаблон, который нужно скопировать!');
-            } else {
-                let response = await fetch('/setting/program', this.options('POST', {
-                    name: name,
-                    type: tmpType,
-                    events: events,
-                }));
-                response = await response.json();
+                return;
+            } 
 
-                if (response.status === 'success') {
-                    this.programs.push(response.data);
-                    this.programId = response.data.id;
-                    this.newProgramName = "";
-
-                    await this.getTmp(response.data.id);
-
-                    switch (tmpType) {
-                        case 'copy':
-                            this.toast('success', 'Шаблон был успешно скопирован под именем: \"' + name + '\".');
-                            break;
-                        case 'default':
-                        case 'empty':
-                        default:
-                            this.toast('success', 'Шаблон \"' + name + '\" был успешно создан.');
-                    }
-                    this.newTmpModal.hide();
-                } else {
-                    this.toast('error', 'Шаблон c именем: \"' + name + '\" уже существует. Придумайте другое.');
-                }
+            let response = await this.request('/setting/program','POST', {
+                name: name,
+                type: tmpType,
+                events: events,
+            });
+            
+            if (response.status !== 'success') {
+                this.toast('error', 'Шаблон c именем: \"' + name + '\" уже существует. Придумайте другое.');
+                return;
             }
+            this.programs.push(response.data);
+            this.programId = response.data.id;
+            this.newProgramName = "";
+
+            await this.getTmp(response.data.id);
+            switch (tmpType) {
+                case 'copy':
+                    this.toast('success', 'Шаблон был успешно скопирован под именем: \"' + name + '\".');
+                    break;
+                case 'default':
+                case 'empty':
+                default:
+                    this.toast('success', 'Шаблон \"' + name + '\" был успешно создан.');
+            }
+            this.newTmpModal.hide();
         },
 
         /**
@@ -468,19 +443,18 @@ export default {
             if (this.events[0] === undefined) {
                 this.events[0] = { name: "empty", src: "empty", type: 0, time: 1, isActive: true }
             }
-            let response = await fetch('/setting/program/save', this.options('POST', {
+            let response = await this.request('/setting/program/save', 'POST', {
                 id: this.openedProgramId,
                 events: this.events,
-            }));
-            response = await response.json();
+            });
 
-            if (response.status === 'success') {
-                this.saveModal.hide();
-                this.toast('success', 'Изменения сохранены');
-                this.composeDetailsModal.withChanges = false;
-            } else {
+            if (response.status !== 'success') {
                 this.toast('error', 'Произошла ошибка');
+                return;
             }
+            this.saveModal.hide();
+            this.toast('success', 'Изменения сохранены');
+            this.composeDetailsModal.withChanges = false;
         },
 
         /**
@@ -494,9 +468,8 @@ export default {
                 this.toast('error', 'Выберите шаблон, который хотите удалить.');
                 return;
             }
-            let response = await fetch('/setting/program', this.options('DELETE', { id }));
-            response = await response.json();
 
+            let response = await this.request('/setting/program', 'DELETE', { id });
             if (response.status !== 'success') {
                 this.toast('error', 'Данная программа не найдена. Попробуйте перезагрузить страницу.');
                 return;
@@ -523,9 +496,9 @@ export default {
                 return;
             }
             if (addForm.name.length > 50) {
-                this.toast('error', 'Полученно слишком длинное наименование события. \nПроверьте, пожалуйста, правильность введённых данных. \nРазрешено символов: 50. Получено: ' + addForm.name.length);
+                this.toast('error', 'Получено слишком длинное наименование события. \nПроверьте, пожалуйста, правильность введённых данных. \nРазрешено символов: 50. Получено: ' + addForm.name.length);
             } else if (!Number.isFinite(addForm.time) || addForm.time < 0) {
-                this.toast('error', 'Полчено некорректное значение времени при добавлении события. \n Проверьте, пожалуйста, правильность введённых данных.');
+                this.toast('error', 'Получено некорректное значение времени при добавлении события. \n Проверьте, пожалуйста, правильность введённых данных.');
             } else if (this.format.test(addForm.name)) {
                 this.toast('error', 'Имя события не должно содержать специальных символов: \n' + this.format);
             } else if (addForm.name.trim() === '') {
@@ -551,7 +524,7 @@ export default {
         },
 
         /**
-         * Сохренение изменений, внесенных в событие
+         * Сохранение изменений, внесенных в событие
          * @param index
          * @returns {Promise<void>}
          */
@@ -674,33 +647,30 @@ export default {
                 }
             }
 
-            let response = await fetch('/setting/compose', this.options('POST', {
+            let response = await this.request('/setting/compose', 'POST', {
                 name: this.newComposeName,
                 comment: this.composeDescription,
                 programsId: this.composePrograms,
                 times: this.composeTimes,
                 screen: this.composeTargetScreen,
                 isSpec: this.composeSpecialFlag
-            }));
-            response = await response.json();
-
-            if (response.status === 'success') {
-                this.sendCallback.hide();
-                let newCmp = response.data;
-                newCmp.lock = true;
-
-                await this.allTmp(false);
-
-                this.newComposeName = '';
-                this.composeDescription = '';
-                this.composePrograms = ['-', '-', '-'];
-                this.composeTimes = [];
-                this.composeTargetScreen = '1';
-
-                this.toast('success', 'Композиция успешно собрана.');
-            } else {
+            });
+        
+            if (response.status !== 'success') {
                 this.toast('error', response.data);
+                return;
             }
+            this.sendCallback.hide();
+            let newCmp = response.data;
+            newCmp.lock = true;
+
+            await this.allTmp(false);
+            this.newComposeName = '';
+            this.composeDescription = '';
+            this.composePrograms = ['-', '-', '-'];
+            this.composeTimes = [];
+            this.composeTargetScreen = '1';
+            this.toast('success', 'Композиция успешно собрана.');
         },
 
         /**
@@ -726,10 +696,10 @@ export default {
         {
             if (this.CMP_EDIT_STARTED) {
                 this.toast('error', 'Для корректности работы одновременно можно редактировать не более одной программы.');
-            } else {
-                this.CMP_EDIT_STARTED = true;
-                this.composes[index].lock = false;
-            }
+                return
+            } 
+            this.CMP_EDIT_STARTED = true;
+            this.composes[index].lock = false;
         },
 
         /**
@@ -759,13 +729,13 @@ export default {
                 if (eventList[0] !== undefined) {
                     replace = eventList;
                 }
-                response = await fetch('/setting/compose/update', this.options('POST', {
+                response = await this.request('/setting/compose/update', 'POST', {
                     id: cmp.id,
                     forDate,
                     programs,
                     eventList: replace,
                     timingList: null,
-                }));
+                });
             } else {
                 let tmpFilter = [], timeFilter = [], eventFilter = [];
 
@@ -781,25 +751,24 @@ export default {
                     eventFilter.push(eventList[i].events);
                 }
 
-                response = await fetch('/setting/compose/update', this.options('POST', {
+                response = await this.request('/setting/compose/update', 'POST', {
                     id: cmp.id,
                     forDate,
                     programs: tmpFilter,
                     eventList: eventFilter,
                     timingList: timeFilter,
-                }));
+                });
             }
-            response = await response.json();
-
-            if (response.status === 'success') {
-                this.toast('success', 'Изменения внесены успешно');
-                this.sendDetailWorkdays.hide();
-                this.CMP_EDIT_STARTED = false;
-                cmp.lock = true;
-                await this.allTmp(false);
-            } else {
+           
+            if (response.status !== 'success') {
                 this.toast('error', response.data);
+                return;
             }
+            this.toast('success', 'Изменения внесены успешно');
+            this.sendDetailWorkdays.hide();
+            this.CMP_EDIT_STARTED = false;
+            cmp.lock = true;
+            await this.allTmp(false);
         },
 
         /**
@@ -815,19 +784,18 @@ export default {
                 return;
             }
 
-            let response = await fetch('/setting/compose', this.options('DELETE', {
+            let response = await this.request('/setting/compose', 'DELETE', {
                 id,
                 withPrograms,
-            }));
-            response = await response.json();
+            });
 
-            if (response.status === 'success') {
-                this.toast('success', 'Скомпонованная программа была успешно удалена.');
-                await this.allTmp(false);
-                this.CMP_EDIT_STARTED = false;
-            } else {
+            if (response.status !== 'success') {
                 this.toast('error', response.data);
+                return;
             }
+            this.toast('success', 'Скомпонованная программа была успешно удалена.');
+            await this.allTmp(false);
+            this.CMP_EDIT_STARTED = false;
         },
 
         /**
@@ -839,24 +807,23 @@ export default {
          */
         async sendCompose(id, name, description)
         {
-            let response = await fetch('/setting/compose/send', this.options('POST', {
+            let response = await this.request('/setting/compose/send', 'POST', {
                 id,
                 name,
                 description,
                 date: this.composeTargetDate,
-            }));
-            response = await response.json();
-
-            if (response.status === 'success') {
-                this.toast('success', 'Отправлено на утверждение');
-                this.modalSend.hide();
-                this.CMP_NAME = '';
-                this.CMP_COMM = '';
-                await this.allTmp(false);
-            } else {
+            });
+    
+            if (response.status !== 'success') {
                 this.toast('error', response.data);
+                return;
             }
-        },
+            this.toast('success', 'Отправлено на утверждение');
+            this.modalSend.hide();
+            this.CMP_NAME = '';
+            this.CMP_COMM = '';
+            await this.allTmp(false);
+    },
 
         /**
          * Переключение между просмотром своих / чужих композиций
@@ -951,18 +918,16 @@ export default {
          */
         async recall(id)
         {
-            let response = await fetch('/setting/compose/recall', this.options('POST', {
+            let response = await this.request('/setting/compose/recall', 'POST', {
                 id: id,
-            }));
-            response = await response.json();
-
+            });
+    
             if (response.status !== 'success') {
                 this.toast('error', 'Произошла ошибка');
                 return;
             }
-
             await this.allTmp(false);
-            this.toast('success', 'Композиция была отзвана из модерации');
+            this.toast('success', 'Композиция отозвана из модерации');
         }
     },
     async mounted()

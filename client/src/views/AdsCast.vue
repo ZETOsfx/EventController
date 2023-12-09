@@ -1,6 +1,6 @@
 <script>
 export default {
-    inject: ['toast'],
+    inject: ['toast', 'request'],
     data() {
         return {
             ads: [],
@@ -8,16 +8,7 @@ export default {
     },
     methods: {
         async getAds() {
-            let response = await fetch('/notes/cast', {
-                method: 'GET',
-                headers: new Headers({
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                }),
-            });
-            response = await response.json();
-
+            let response = await this.request('/notes/cast', 'GET');
             if (response.status !== 'success') {
                 this.toast('error', 'Что-то пошло не так :(');
                 return;

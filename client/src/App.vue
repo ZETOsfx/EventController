@@ -18,7 +18,8 @@ export default {
             browserVersion: () => this.browserVersion,
             browserEngineName: () => this.browserEngineName,
 
-            options: (method, body) => this.options(method, body),
+            request: (route, method, body) => this.request(route, method, body),
+
             toast: (type, msg) => this.toast(type, msg),
             clickBlock: flag => this.clickBlock(flag),
             formNextFocus: id => this.formNextFocus(id),
@@ -211,6 +212,7 @@ export default {
          */
         async onLogout() {
             this.socket = {};
+            localStorage.removeItem('user');
             await this.closeTab();
         },
 
@@ -277,20 +279,34 @@ export default {
         },
 
         /**
-         * Обертка для установки параметров при отправке запроса
+         * HTTP Request Fetch API
          *
-         * @param {*} method Метод запроса
-         * @param {*} body Тело запроса
+         * @param {*} route     Target endpoint
+         * @param {*} method    REST method
+         * @param {*} body      Request body
          */
-        options(method, body) {
-            return {
+        async request(route, method, body) {
+            let response = await fetch(route, {
                 method: method,
                 headers: {
                     'Content-type': 'application/json; charset=UTF-8',
-                    'x-access-token': JSON.parse(localStorage.getItem('user')).token,
+                    Accept: 'application/json',
+                    sameSite: ' None; Secure',
+                    'Access-Control-Allow-Origin': '*',
+                    'x-access-token': JSON.parse(localStorage.getItem('user'))?.token,
                 },
-                body: JSON.stringify(body),
-            };
+                body: method !== 'GET' ? JSON.stringify(body) : undefined,
+            }).then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else if ([401, 403, 500].includes(response.status)) {
+                    this.onLogout();
+                    this.$router.push('/login');
+                }
+                return Promise.reject(response);
+            });
+
+            return response;
         },
 
         /**
@@ -316,6 +332,7 @@ export default {
 
             this.currentTime = hour + ':' + min + ':' + sec;
         },
+
         formNextFocus(id) {
             this.$nextTick(() => {
                 document.getElementById(id).focus({ focusVisible: true });

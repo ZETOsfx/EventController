@@ -4,7 +4,7 @@ import customImage from '../components/image.vue';
 import customVideo from '../components/video.vue';
 
 export default {
-    inject: ['socket', 'toast'],
+    inject: ['socket', 'toast', 'request'],
     components: {
         customImage,
         customVideo,
@@ -35,16 +35,7 @@ export default {
         },
 
         async getData() {
-            let response = await fetch('/cast', {
-                method: 'GET',
-                headers: new Headers({
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                }),
-            });
-            response = await response.json();
-
+            let response = await this.request('/cast', 'GET');
             if (response.status === 'success') {
                 this.list = response.data;
             }

@@ -179,7 +179,7 @@ export default {
         };
     },
     methods: {
-        // Запрос конкетного параметра состояния с сервера "ПЛАТА"
+        // Запрос конкретного параметра состояния с сервера "ПЛАТА"
         getValue(room, oid) {
             if (typeof room !== 'string') {
                 room = room.toString();
@@ -188,6 +188,7 @@ export default {
             console.log(`Get ${oid} from TV in ${room}`);
             this.socket().to(room).emit('getParam', { room, oid });
         },
+
         // Отправить команду на сервер "ПЛАТА"
         setValue(room, oid, value) {
             if (typeof room !== 'string') {
@@ -197,6 +198,7 @@ export default {
             console.log(`Set ${oid} = ${value} TV in ${room}`);
             this.socket().emit('setParam', { room, oid, value });
         },
+
         // Получить все параметры состояния сразу
         getTelemetry(room) {
             if (typeof room !== 'string') {

@@ -1,6 +1,6 @@
 <script>
 export default {
-    inject: ['session', 'socket', 'toast', 'options', 'browserName', 'browserVersion', 'osName', 'osVersion', 'browserEngineName'],
+    inject: ['session', 'socket', 'toast', 'browserName', 'browserVersion', 'osName', 'osVersion', 'browserEngineName', 'request'],
     data() {
         return {
             short: '',
@@ -19,22 +19,17 @@ export default {
                 return;
             }
 
-            let response = await fetch(
-                '/report',
-                this.options('POST', {
-                    short: this.short,
-                    description: this.description,
-                    browserData: this.browserName() + ' ' + this.browserVersion() + ' (' + this.browserEngineName() + ')',
-                    osData: this.osName() + ' ' + this.osVersion(),
-                })
-            );
-            response = await response.json();
+            let response = await this.request('/report', 'POST', {
+                short: this.short,
+                description: this.description,
+                browserData: this.browserName() + ' ' + this.browserVersion() + ' (' + this.browserEngineName() + ')',
+                osData: this.osName() + ' ' + this.osVersion(),
+            });
 
             if (response.status !== 'success') {
                 this.toast('error', response.data);
                 return;
             }
-
             this.toast('success', response.data);
             this.short = '';
             this.description = '';

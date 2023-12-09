@@ -1,4 +1,7 @@
-const authMw = require('./middleware/authMiddleware');
+const authMwFactory = require('./middleware/authMiddlewareFactory');
+const authMw = authMwFactory(true);
+const liteMw = authMwFactory(false);
+
 const multer = require('multer');
 
 const fileStorageEngine = multer.diskStorage({
@@ -31,7 +34,7 @@ const getRoutes = app => {
      * @param { login, password }
      * @return { token, unread, name, role }
      */
-    app.post('/auth', require('./handlers/authHandler'));
+    app.post('/auth', liteMw, require('./handlers/authHandler'));
 
     /**
      * Операции с уведомлениями
@@ -41,7 +44,7 @@ const getRoutes = app => {
      * 4. Delete - удаление объявления
      * -> Доступны всем авторизованным, кроме редактора
      */
-    app.get('/notes/cast', require('./handlers/notes/castNotesHandler'));
+    app.get('/notes/cast', liteMw, require('./handlers/notes/castNotesHandler'));
     app.get('/notes/read', authMw, require('./handlers/notes/readNotesHandler'));
     app.post('/notes/add', authMw, require('./handlers/notes/addNoteHandler'));
     app.delete('/notes/delete', authMw, require('./handlers/notes/deleteNoteHandler'));
@@ -56,8 +59,8 @@ const getRoutes = app => {
      * Получение списка транслируемых событий
      * -> Доступно всем
      */
-    app.get('/cast', require('./handlers/castHandler'));
-    app.get('/sync', require('./handlers/syncHandler'));
+    app.get('/cast', liteMw, require('./handlers/castHandler'));
+    app.get('/sync', liteMw, require('./handlers/syncHandler'));
 
     /**
      * Операции по настройке трансляции

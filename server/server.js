@@ -5,6 +5,7 @@ const db = require('./models');
 
 const http = require('http');
 const express = require('express');
+const compression = require('compression');
 const path = require('path');
 
 const cors = require('cors');
@@ -16,9 +17,11 @@ const history = require('connect-history-api-fallback');
 const app = express();
 const server = http.createServer(app);
 
+app.disable('x-powered-by');
 app.set('view-engine', 'ejs');
 
 app.use(
+    compression(),
     cors({
         origin: 'http://localhost:3000',
         credentials: true,
@@ -43,6 +46,7 @@ app.get('/js/vue.js', (req, res) => {
 });
 
 app.get('/', (req, res) => {
+    res.removeHeader('X-Powered-By');
     res.render(__dirname + '/app.ejs', {
         API_URL: process.env.API_URL,
         NODE_ENV: process.env.NODE_ENV,
