@@ -3,6 +3,7 @@ require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const argon2 = require('argon2');
 
+const { Op } = require('sequelize');
 const { User, Role, Note, User_Note } = require('../../models');
 
 /**
@@ -22,9 +23,7 @@ class AuthService {
         const { login, password } = params?.body;
 
         const user = await User.findOne({
-            where: {
-                login: login,
-            },
+            where: { login },
             include: {
                 as: 'role',
                 model: Role,
@@ -34,7 +33,7 @@ class AuthService {
         });
 
         if (!user.id) {
-            throw new Error('Пользователь с данным логином не найден');
+            throw new Error('User not found');
         }
 
         const correctPassword = await argon2.verify(user.passHash, password);
@@ -43,32 +42,40 @@ class AuthService {
             throw new Error('Incorrect password');
         }
 
-        const actualNotes = await Note.findAll({
+        const notes = await Note.findAll({
             where: {
-                addressedTo: null,
+                addressedTo: {
+                    [Op.or]: [null, user.login],
+                },
             },
         });
 
-        const personalNotes = await Note.findAll({
-            where: {
-                addressedTo: user.login,
-            },
-        });
+        let actualNotes = 0;
+        let personalNotes = 0;
+
+        for (let note of notes) {
+            if (note.addressedTo === null) {
+                actualNotes++;
+                continue;
+            }
+            personalNotes++;
+        }
 
         const viewed = await User_Note.findAll({
             where: {
                 userId: user.id,
             },
+            attributes: ['id'],
         });
 
-        let roleStr = user.role.role;
+        const role = user.role.role;
 
         const token = jwt.sign(
             {
                 userId: user.id,
-                login,
                 name: user.name,
-                role: roleStr,
+                login,
+                role,
             },
             process.env.TOKEN_KEY,
             {
@@ -77,10 +84,10 @@ class AuthService {
         );
 
         return {
-            token: token,
-            unread: actualNotes.length + personalNotes.length - viewed.length,
+            token,
+            role,
+            unread: actualNotes + personalNotes - viewed.length,
             name: user.name,
-            role: user.role,
         };
     }
 }

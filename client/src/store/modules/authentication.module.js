@@ -26,6 +26,9 @@ export const authentication = {
             userService.logout();
             commit('logout');
         },
+        readNotes({ commit }) {
+            commit('readAll');
+        },
     },
     mutations: {
         loginRequest(state, user) {
@@ -43,6 +46,9 @@ export const authentication = {
         logout(state) {
             state.status = {};
             state.user = null;
+        },
+        readAll(state) {
+            state.user && state.user.unread && (state.user.unread = 0);
         },
     },
 };

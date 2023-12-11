@@ -120,7 +120,7 @@ router.beforeEach((to, from, next) => {
     if (!user) {
         return next('/login');
     }
-    if (to.meta.roles.includes(user.role.role)) {
+    if (to.meta.roles.includes(user.role)) {
         return next();
     } else {
         return next('/404');

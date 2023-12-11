@@ -17,7 +17,9 @@ class UserService {
      * @return Array Список аккаунтов в системе
      */
     async getAll(params) {
-        this.accessCheck(params);
+        if (!params.user.role) {
+            throw new Error('No access rights');
+        }
 
         let response = [];
 
@@ -171,7 +173,7 @@ class UserService {
      */
     accessCheck(params) {
         if (!['admin'].includes(params.user.role)) {
-            throw new Error('Нет прав доступа');
+            throw new Error('No access rights');
         }
     }
 

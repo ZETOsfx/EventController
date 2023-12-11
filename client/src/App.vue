@@ -31,7 +31,7 @@ export default {
 
             session: {
                 loggedin: computed(() => !!this.$store.state.authentication.user?.name),
-                role: computed(() => this.$store.state.authentication.user?.role.role),
+                role: computed(() => this.$store.state.authentication.user?.role),
                 name: computed(() => this.$store.state.authentication.user?.name),
                 unread: computed(() => this.$store.state.authentication.user?.unread),
             },
@@ -181,6 +181,10 @@ export default {
             if (window.innerWidth <= 768 && !document.body.querySelector('nav').classList.contains('close')) {
                 document.body.querySelector('nav').classList.add('close');
                 localStorage.setItem('status', 'close');
+            }
+
+            if (page === 'note') {
+                this.$store.dispatch('authentication/readNotes');
             }
 
             if (this.page === 'moderator' && page !== 'moderator') {

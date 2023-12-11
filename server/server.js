@@ -5,13 +5,14 @@ const db = require('./models');
 
 const http = require('http');
 const express = require('express');
-const compression = require('compression');
 const path = require('path');
 
 const cors = require('cors');
 const morgan = require('morgan');
 const favicon = require('serve-favicon');
 const session = require('express-session');
+const compression = require('compression');
+var cookieParser = require('cookie-parser');
 const history = require('connect-history-api-fallback');
 
 const app = express();
@@ -22,6 +23,7 @@ app.set('view-engine', 'ejs');
 
 app.use(
     compression(),
+    cookieParser(),
     cors({
         origin: 'http://localhost:3000',
         credentials: true,
